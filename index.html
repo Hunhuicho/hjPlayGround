@@ -3,79 +3,105 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>스네이크 미니게임</title>
+<title>스네이크 — 방향키 미니게임</title>
 <style>
+  /* 흑백 LCD 휴대용 게임기. 화면 자체가 하나의 사물이므로 단일 테마로 확정하고,
+     배경과 모든 색을 명시해 호스트 테마와 무관하게 같은 모습으로 보이게 한다. */
   :root {
-    --bg: #10131a;
-    --panel: #181d28;
-    --grid: #1f2534;
-    --snake: #4ade80;
-    --snake-head: #86efac;
-    --food: #f87171;
-    --text: #e5e7eb;
-    --muted: #8b93a7;
-    --accent: #60a5fa;
+    --case:        #1c1d19;
+    --case-face:   #33352c;
+    --case-edge:   #4a4d40;
+    --case-shadow: #121310;
+    --case-text:   #9ba08b;   /* 케이스 위 각인 — 어두운 플라스틱에서 4.6:1 */
+    --lcd:         #a9b884;
+    --lcd-dim:     #9cac77;
+    --ink:         #242b1c;
+    --ink-soft:    #5c6a49;
+    --key:         #26281f;
+    --key-face:    #3d4034;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
   }
 
   * { box-sizing: border-box; }
 
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-  }
+  html, body { height: 100%; margin: 0; }
 
   body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans KR", sans-serif;
+    background: var(--case);
+    color: var(--lcd);
+    font-family: var(--mono);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    padding: 16px;
+    padding: 20px;
     touch-action: manipulation;
     -webkit-user-select: none;
     user-select: none;
   }
 
-  h1 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-  }
-
-  .scoreboard {
+  .device {
     display: flex;
-    gap: 24px;
-    font-variant-numeric: tabular-nums;
-    font-size: 14px;
-    color: var(--muted);
+    flex-direction: column;
+    gap: 18px;
+    padding: 22px;
+    border-radius: 18px;
+    background: var(--case-face);
+    border: 1px solid var(--case-edge);
+    box-shadow: 0 1px 0 var(--case-edge) inset, 0 18px 40px -18px var(--case-shadow);
   }
 
-  .scoreboard strong {
-    color: var(--text);
-    font-size: 18px;
-    margin-left: 6px;
+  /* ── 케이스 상단 각인 ─────────────────────────── */
+  .brand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--case-text);
+  }
+
+  .brand .model { letter-spacing: 0.14em; opacity: 0.7; }
+
+  /* ── LCD 화면 ─────────────────────────────────── */
+  .screen {
+    padding: 14px;
+    border-radius: 6px;
+    background: var(--lcd);
+    box-shadow: 0 2px 8px var(--case-shadow) inset, 0 0 0 2px var(--case-shadow);
+  }
+
+  .readout {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--lcd-dim);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .readout b {
+    margin-left: 8px;
+    font-size: 17px;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
   }
 
   .stage {
     position: relative;
-    width: min(92vw, 92vh - 160px, 480px);
+    width: min(78vw, 62vh, 360px);
     aspect-ratio: 1;
   }
 
-  canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-    background: var(--panel);
-    border-radius: 12px;
-    border: 1px solid #262d3d;
-  }
+  canvas { width: 100%; height: 100%; display: block; }
 
+  /* ── 화면 위 메시지 ───────────────────────────── */
   .overlay {
     position: absolute;
     inset: 0;
@@ -83,89 +109,142 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    background: rgba(16, 19, 26, 0.82);
-    border-radius: 12px;
+    gap: 12px;
+    padding: 18px;
     text-align: center;
-    padding: 20px;
+    background: rgba(169, 184, 132, 0.93);
+    color: var(--ink);
   }
 
   .overlay[hidden] { display: none; }
 
-  .overlay .title { font-size: 22px; font-weight: 700; }
-  .overlay .desc { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .overlay .title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
 
+  .overlay .desc {
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--ink-soft);
+  }
+
+  .overlay .desc b {
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── 조작부 ───────────────────────────────────── */
   button {
     font: inherit;
-    font-weight: 600;
-    color: #0b1020;
-    background: var(--accent);
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
     cursor: pointer;
+    border: none;
+    border-radius: 4px;
   }
 
-  button:hover { filter: brightness(1.08); }
-  button:active { transform: translateY(1px); }
-
-  .hint {
-    font-size: 13px;
-    color: var(--muted);
-    text-align: center;
-    line-height: 1.6;
+  button:focus-visible {
+    outline: 2px solid var(--lcd);
+    outline-offset: 2px;
   }
+
+  #start-btn {
+    margin-top: 2px;
+    padding: 9px 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--lcd);
+    background: var(--ink);
+  }
+
+  #start-btn:hover { background: var(--ink-soft); }
+  #start-btn:active { transform: translateY(1px); }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .legend {
+    margin: 0;
+    font-size: 11px;
+    line-height: 2;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--case-text);
+  }
+
+  .legend b { color: var(--lcd); font-weight: 700; }
 
   .dpad {
     display: grid;
-    grid-template-columns: repeat(3, 56px);
-    grid-template-rows: repeat(2, 56px);
-    gap: 8px;
+    grid-template-columns: repeat(3, 40px);
+    grid-template-rows: repeat(3, 40px);
+    gap: 4px;
+    flex: none;
   }
 
   .dpad button {
-    width: 56px;
-    height: 56px;
-    background: var(--grid);
-    color: var(--text);
-    font-size: 20px;
-    border-radius: 10px;
+    background: var(--key-face);
+    color: var(--lcd);
+    font-size: 13px;
+    line-height: 1;
+    box-shadow: 0 2px 0 var(--key);
   }
 
-  .dpad .up   { grid-column: 2; grid-row: 1; }
-  .dpad .left { grid-column: 1; grid-row: 2; }
-  .dpad .down { grid-column: 2; grid-row: 2; }
-  .dpad .right{ grid-column: 3; grid-row: 2; }
+  .dpad button:active { transform: translateY(2px); box-shadow: none; }
 
-  @media (hover: hover) and (pointer: fine) {
-    .dpad { display: none; }
+  .dpad .up    { grid-area: 1 / 2; }
+  .dpad .left  { grid-area: 2 / 1; }
+  .dpad .down  { grid-area: 3 / 2; }
+  .dpad .right { grid-area: 2 / 3; }
+
+  @media (prefers-reduced-motion: reduce) {
+    button:active { transform: none; }
   }
 </style>
 </head>
 <body>
-  <h1>🐍 스네이크</h1>
-
-  <div class="scoreboard">
-    <span>점수 <strong id="score">0</strong></span>
-    <span>최고 <strong id="best">0</strong></span>
-  </div>
-
-  <div class="stage">
-    <canvas id="board" width="400" height="400"></canvas>
-    <div class="overlay" id="overlay">
-      <div class="title" id="overlay-title">시작할 준비되셨나요?</div>
-      <div class="desc" id="overlay-desc">방향키 또는 WASD로 움직이세요.<br>먹이를 먹으면 길어집니다.</div>
-      <button id="start-btn">게임 시작</button>
+  <div class="device">
+    <div class="brand">
+      <span>Snake</span>
+      <span class="model">hjPlayGround</span>
     </div>
-  </div>
 
-  <p class="hint">방향키 / WASD 이동 · 스페이스바 일시정지 · R 다시 시작</p>
+    <div class="screen">
+      <div class="readout">
+        <span>Score <b id="score">0</b></span>
+        <span>Best <b id="best">0</b></span>
+      </div>
 
-  <div class="dpad">
-    <button class="up"    data-dir="up"    aria-label="위">▲</button>
-    <button class="left"  data-dir="left"  aria-label="왼쪽">◀</button>
-    <button class="down"  data-dir="down"  aria-label="아래">▼</button>
-    <button class="right" data-dir="right" aria-label="오른쪽">▶</button>
+      <div class="stage">
+        <canvas id="board" width="400" height="400"></canvas>
+        <div class="overlay" id="overlay">
+          <div class="title" id="overlay-title">Ready</div>
+          <div class="desc" id="overlay-desc">방향키로 뱀을 움직여<br>먹이를 먹으세요.</div>
+          <button id="start-btn">Start</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <p class="legend">
+        <b>← ↑ ↓ →</b> 이동<br>
+        <b>Space</b> 일시정지 · <b>R</b> 다시 시작
+      </p>
+      <div class="dpad">
+        <button class="up"    data-dir="up"    aria-label="위쪽으로 이동">▲</button>
+        <button class="left"  data-dir="left"  aria-label="왼쪽으로 이동">◀</button>
+        <button class="down"  data-dir="down"  aria-label="아래쪽으로 이동">▼</button>
+        <button class="right" data-dir="right" aria-label="오른쪽으로 이동">▶</button>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -192,6 +271,17 @@
   };
 
   var BEST_KEY = 'snake.best';
+
+  // LCD 픽셀 색은 매 프레임 계산하지 않고 한 번만 읽어 둔다
+  var COLORS = (function () {
+    var s = getComputedStyle(document.documentElement);
+    return {
+      lcd:  s.getPropertyValue('--lcd').trim(),
+      grid: s.getPropertyValue('--lcd-dim').trim(),
+      ink:  s.getPropertyValue('--ink').trim(),
+      soft: s.getPropertyValue('--ink-soft').trim()
+    };
+  })();
 
   var snake, dir, queuedDir, food, score, best, state, tickMs, accumulator, lastTime;
 
@@ -268,11 +358,11 @@
   }
 
   function draw() {
-    ctx.fillStyle = getVar('--panel');
+    ctx.fillStyle = COLORS.lcd;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 격자
-    ctx.strokeStyle = getVar('--grid');
+    // 액정 격자
+    ctx.strokeStyle = COLORS.grid;
     ctx.lineWidth = 1;
     for (var i = 1; i < GRID; i++) {
       var p = i * CELL + 0.5;
@@ -282,31 +372,31 @@
       ctx.stroke();
     }
 
+    // 단색 화면이므로 먹이는 색이 아니라 모양(마름모)으로 구분한다
     if (food) {
-      ctx.fillStyle = getVar('--food');
-      roundRect(food.x * CELL + 4, food.y * CELL + 4, CELL - 8, CELL - 8, 4);
+      var cx = food.x * CELL + CELL / 2;
+      var cy = food.y * CELL + CELL / 2;
+      var r = CELL / 2 - 2;
+      ctx.fillStyle = COLORS.ink;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r);
+      ctx.lineTo(cx + r, cy);
+      ctx.lineTo(cx, cy + r);
+      ctx.lineTo(cx - r, cy);
+      ctx.closePath();
       ctx.fill();
     }
 
     for (var s = snake.length - 1; s >= 0; s--) {
-      ctx.fillStyle = s === 0 ? getVar('--snake-head') : getVar('--snake');
-      roundRect(snake[s].x * CELL + 1, snake[s].y * CELL + 1, CELL - 2, CELL - 2, 4);
-      ctx.fill();
+      var x = snake[s].x * CELL, y = snake[s].y * CELL;
+      ctx.fillStyle = COLORS.ink;
+      ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+      if (s === 0) {
+        // 머리에만 액정 색 눈을 뚫어 진행 방향을 알아보게 한다
+        ctx.fillStyle = COLORS.lcd;
+        ctx.fillRect(x + CELL / 2 - 1.5, y + CELL / 2 - 1.5, 3, 3);
+      }
     }
-  }
-
-  function roundRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
-  function getVar(name) {
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
   function loop(time) {
@@ -337,6 +427,7 @@
     overlayDesc.innerHTML = desc;
     startBtn.textContent = buttonLabel;
     overlay.hidden = false;
+    startBtn.focus();
   }
 
   function start() {
@@ -351,20 +442,20 @@
     state = 'over';
     saveBest();
     draw();
-    showOverlay('게임 오버', reason + '<br>점수: <b>' + score + '</b>', '다시 하기');
+    showOverlay('Game Over', reason + '<br>점수 <b>' + score + '</b>', 'Retry');
   }
 
   function win() {
     state = 'over';
     saveBest();
     draw();
-    showOverlay('클리어! 🎉', '판을 가득 채웠어요.<br>점수: <b>' + score + '</b>', '다시 하기');
+    showOverlay('Cleared', '판을 가득 채웠어요.<br>점수 <b>' + score + '</b>', 'Retry');
   }
 
   function togglePause() {
     if (state === 'playing') {
       state = 'paused';
-      showOverlay('일시정지', '스페이스바를 누르거나 버튼을 눌러 계속하세요.', '계속하기');
+      showOverlay('Paused', '스페이스바를 누르면<br>이어서 계속합니다.', 'Resume');
     } else if (state === 'paused') {
       state = 'playing';
       overlay.hidden = true;
