@@ -159,7 +159,7 @@
   .levels[hidden] { display: none; }   /* display:flex 가 hidden 속성을 덮어쓰지 않도록 */
 
   .levels .level {
-    padding: 7px 16px;
+    padding: 7px 12px;
     font-size: 12px;
     letter-spacing: 0.06em;
     color: var(--panel-dim);
@@ -274,7 +274,8 @@
           <div class="title" id="overlay-title">Ready</div>
           <div class="desc" id="overlay-desc"></div>
           <div class="levels" id="levels" role="group" aria-label="난이도">
-            <button class="level is-on" data-level="easy" aria-pressed="true">쉬움</button>
+            <button class="level is-on" data-level="veryeasy" aria-pressed="true">매우 쉬움</button>
+            <button class="level" data-level="easy" aria-pressed="false">쉬움</button>
             <button class="level" data-level="normal" aria-pressed="false">보통</button>
           </div>
           <div class="levels" id="views" role="group" aria-label="시점">
@@ -378,17 +379,26 @@
   var FENCE = 1, ROCK = 2, HUT = 3, HUT_HIT = 4, ROCK_2 = 5, ROCK_1 = 6;
 
   var LEVELS = {
+    veryeasy: {
+      lives: 9, total: 5, maxAlive: 1,
+      playerSpeed: 120, enemySpeed: 32,
+      playerBullet: 260, enemyBullet: 95,
+      playerReload: 280, enemyReload: 3200,
+      invuln: 2600
+    },
     easy: {
       lives: 5, total: 8, maxAlive: 2,
       playerSpeed: 120, enemySpeed: 58,
       playerBullet: 245, enemyBullet: 155,
-      playerReload: 380, enemyReload: 2000
+      playerReload: 380, enemyReload: 2000,
+      invuln: 1500
     },
     normal: {
       lives: 3, total: 12, maxAlive: 3,
       playerSpeed: 154, enemySpeed: 92,
       playerBullet: 320, enemyBullet: 237,
-      playerReload: 300, enemyReload: 1100
+      playerReload: 300, enemyReload: 1100,
+      invuln: 1200
     }
   };
 
@@ -468,7 +478,7 @@
       isPlayer: isPlayer,
       reload: 0,
       think: 0,
-      invuln: isPlayer ? 1500 : 0
+      invuln: isPlayer ? level.invuln : 0
     };
   }
 
@@ -1294,7 +1304,7 @@
   }
 
   function setLevel(name) {
-    levelName = LEVELS[name] ? name : 'easy';
+    levelName = LEVELS[name] ? name : 'veryeasy';
     level = LEVELS[levelName];
     try { localStorage.setItem(LEVEL_KEY, levelName); } catch (e) { /* 무시 */ }
     // 시점 버튼도 .level 스타일을 함께 쓰므로 data-level 로 좁혀 잡는다
@@ -1456,7 +1466,7 @@
   // ── 첫 화면 — 기본은 쉬움 ─────────────────────
   state = 'ready';
   setView(localStorage.getItem(VIEW_KEY) || 'fpv');
-  setLevel(localStorage.getItem(LEVEL_KEY) || 'easy');
+  setLevel(localStorage.getItem(LEVEL_KEY) || 'veryeasy');
   reset();
   draw();
   readyScreen();
