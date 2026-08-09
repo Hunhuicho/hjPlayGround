@@ -881,6 +881,41 @@
     if (EYE > h1)   fillPoly([P(x0, y0, h1), P(x1, y0, h1), P(x1, y1, h1), P(x0, y1, h1)], top);
   }
 
+  // 임의의 볼록 다각형을 기둥으로 세운다 — 상자만으로는 경사 차체나 팔각 포탑을 못 만든다
+  function drawPrism(pts, h0, h1, base) {
+    var area = 0, i;
+    for (i = 0; i < pts.length; i++) {
+      var q = pts[(i + 1) % pts.length];
+      area += pts[i].x * q.y - q.x * pts[i].y;
+    }
+    var wind = area > 0 ? 1 : -1;
+
+    for (i = 0; i < pts.length; i++) {
+      var a = pts[i], b = pts[(i + 1) % pts.length];
+      var nx = (b.y - a.y) * wind, ny = -(b.x - a.x) * wind;
+      if ((cam.x - a.x) * nx + (cam.y - a.y) * ny <= 0) continue;   // 뒷면은 건너뛴다
+      var lean = Math.abs(nx) / (Math.abs(nx) + Math.abs(ny) || 1);
+      fillPoly([P(a.x, a.y, h1), P(b.x, b.y, h1), P(b.x, b.y, h0), P(a.x, a.y, h0)],
+               shade(base, 1 - 0.18 * lean));
+    }
+
+    if (EYE > h1) {
+      var top = [];
+      for (i = 0; i < pts.length; i++) top.push(P(pts[i].x, pts[i].y, h1));
+      fillPoly(top, shade(base, 1.14));
+    }
+  }
+
+  // 탱크 기준 좌표(앞쪽이 -y)를 바라보는 방향에 맞춰 세계 좌표로 옮긴다
+  function localPts(t, list) {
+    var f = t.dir, rx = -f.y, ry = f.x, out = [];
+    for (var i = 0; i < list.length; i += 2) {
+      var px = list[i], py = list[i + 1];
+      out.push({ x: t.x + px * rx - py * f.x, y: t.y + px * ry - py * f.y });
+    }
+    return out;
+  }
+
   function drawSegment(ax, ay, bx, by, color, width) {
     var p = clipNear([P(ax, ay, 0), P(bx, by, 0)]);
     if (p.length < 2) return;
@@ -895,15 +930,41 @@
     ctx.stroke();
   }
 
+  var OCTA = (function () {
+    // 팔각형 한 벌을 미리 뽑아 두고 포탑·큐폴라에 크기만 바꿔 쓴다
+    var out = [];
+    for (var i = 0; i < 8; i++) {
+      var a = (i + 0.5) * Math.PI / 4;
+      out.push(Math.cos(a), Math.sin(a));
+    }
+    return out;
+  })();
+
+  function octagon(t, cxLocal, cyLocal, radius) {
+    var list = [];
+    for (var i = 0; i < OCTA.length; i += 2) {
+      list.push(cxLocal + OCTA[i] * radius, cyLocal + OCTA[i + 1] * radius);
+    }
+    return localPts(t, list);
+  }
+
   function drawEnemy3D(t) {
-    drawBox(t.x - 13, t.y - 13, t.x + 13, t.y + 13, 0, 9, C.track);
-    drawBox(t.x - 11, t.y - 11, t.x + 11, t.y + 11, 9, 17, C.red);
-    drawBox(t.x - 7, t.y - 7, t.x + 7, t.y + 7, 17, 25, C.red);
-    var d = t.dir;
-    var bx0 = t.x + Math.min(d.x * 6, d.x * 26), bx1 = t.x + Math.max(d.x * 6, d.x * 26);
-    var by0 = t.y + Math.min(d.y * 6, d.y * 26), by1 = t.y + Math.max(d.y * 6, d.y * 26);
-    drawBox(bx0 - (d.x ? 0 : 3), by0 - (d.y ? 0 : 3),
-            bx1 + (d.x ? 0 : 3), by1 + (d.y ? 0 : 3), 18, 24, C.redDark);
+    // 무한궤도 두 줄 — 어두운 궤도 위에 밝은 상부 주행부를 얹어 결을 낸다
+    for (var side = -1; side <= 1; side += 2) {
+      var x0 = Math.min(side * 8, side * 13.5), x1 = Math.max(side * 8, side * 13.5);
+      drawPrism(localPts(t, [x0, -13.5, x1, -13.5, x1, 13.5, x0, 13.5]), 0, 10, C.track);
+      drawPrism(localPts(t, [x0 + 1, -12, x1 - 1, -12, x1 - 1, 12, x0 + 1, 12]), 10, 11.5, C.wheel);
+    }
+
+    // 차체 — 앞이 좁고 비스듬한 경사 장갑
+    drawPrism(localPts(t, [-6, -13.5, 6, -13.5, 8.5, -7, 8.5, 12, -8.5, 12, -8.5, -7]),
+              4, 16, C.red);
+
+    drawPrism(octagon(t, 0, 2, 8.5), 16, 25, C.red);        // 포탑
+    drawPrism(octagon(t, 2.5, 6, 3.5), 25, 29, C.redDark);  // 큐폴라
+
+    drawPrism(localPts(t, [-2.5, -30, 2.5, -30, 2.5, -5, -2.5, -5]), 18, 23, C.redDark);
+    drawPrism(localPts(t, [-4, -34.5, 4, -34.5, 4, -29, -4, -29]), 17.5, 23.5, C.muzzle);
   }
 
   function drawGround3D() {
@@ -931,29 +992,30 @@
 
     // 포신은 조준선까지 올리지 않는다 — 정중앙이 가리면 적을 못 본다
     var tip = HORIZON + 76;
-    ctx.beginPath();
-    ctx.moveTo(cx - 40, H);
-    ctx.lineTo(cx - 9, tip);
-    ctx.lineTo(cx + 9, tip);
-    ctx.lineTo(cx + 40, H);
-    ctx.closePath();
-    ctx.fillStyle = C.blueDark;
-    ctx.fill();
-    ctx.strokeStyle = C.outline;
-    ctx.lineWidth = 3;
-    ctx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(cx - 11, tip + 12);
-    ctx.lineTo(cx - 9, tip);
-    ctx.lineTo(cx + 9, tip);
-    ctx.lineTo(cx + 11, tip + 12);
-    ctx.closePath();
-    ctx.fillStyle = C.muzzle;
-    ctx.fill();
-    ctx.strokeStyle = C.outline;
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
+    function taper(halfBottom, halfTop, yTop, yBottom, fill, line) {
+      ctx.beginPath();
+      ctx.moveTo(cx - halfBottom, yBottom);
+      ctx.lineTo(cx - halfTop, yTop);
+      ctx.lineTo(cx + halfTop, yTop);
+      ctx.lineTo(cx + halfBottom, yBottom);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = C.outline;
+      ctx.lineWidth = line;
+      ctx.stroke();
+    }
+
+    taper(64, 17, tip + 54, H, C.blue, 3);          // 포방패
+    taper(19, 9, tip, tip + 58, C.blueDark, 3);     // 포신
+    taper(13, 11, tip + 16, tip + 26, C.blue, 2);   // 포신 띠
+    taper(12, 11, tip - 1, tip + 9, C.muzzle, 2.5); // 포구제퇴기
+
+    // 제퇴기 옆구멍
+    ctx.fillStyle = C.outline;
+    ctx.fillRect(cx - 11, tip + 2, 5, 4);
+    ctx.fillRect(cx + 6, tip + 2, 5, 4);
 
     // 해치 — 바깥은 철판, 안쪽만 뚫려 있다
     ctx.beginPath();
