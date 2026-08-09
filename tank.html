@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>탱크 — 방향키 미니게임</title>
+<style>
+  /* 스네이크와 같은 흑백 LCD 휴대용 게임기. 단일 테마로 확정하고 모든 색을 명시한다. */
+  :root {
+    --case:        #1c1d19;
+    --case-face:   #33352c;
+    --case-edge:   #4a4d40;
+    --case-shadow: #121310;
+    --case-text:   #9ba08b;
+    --lcd:         #a9b884;
+    --lcd-dim:     #9cac77;
+    --ink:         #242b1c;
+    --ink-soft:    #5c6a49;
+    --key:         #26281f;
+    --key-face:    #3d4034;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; margin: 0; }
+
+  body {
+    background: var(--case);
+    color: var(--lcd);
+    font-family: var(--mono);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .device {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 22px;
+    border-radius: 18px;
+    background: var(--case-face);
+    border: 1px solid var(--case-edge);
+    box-shadow: 0 1px 0 var(--case-edge) inset, 0 18px 40px -18px var(--case-shadow);
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--case-text);
+  }
+
+  .brand .model { letter-spacing: 0.14em; opacity: 0.7; }
+
+  .screen {
+    padding: 14px;
+    border-radius: 6px;
+    background: var(--lcd);
+    box-shadow: 0 2px 8px var(--case-shadow) inset, 0 0 0 2px var(--case-shadow);
+  }
+
+  .readout {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--lcd-dim);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .readout b {
+    margin-left: 8px;
+    font-size: 17px;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .stage {
+    position: relative;
+    width: min(78vw, 62vh, 360px);
+    aspect-ratio: 1;
+  }
+
+  canvas { width: 100%; height: 100%; display: block; }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 18px;
+    text-align: center;
+    background: rgba(169, 184, 132, 0.93);
+    color: var(--ink);
+  }
+
+  .overlay[hidden] { display: none; }
+
+  .overlay .title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+
+  .overlay .desc {
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--ink-soft);
+  }
+
+  .overlay .desc b {
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--lcd);
+    outline-offset: 2px;
+  }
+
+  .levels {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .levels[hidden] { display: none; }   /* display:flex 가 hidden 속성을 덮어쓰지 않도록 */
+
+  .levels .level {
+    padding: 7px 16px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+    background: transparent;
+    box-shadow: 0 0 0 1px var(--ink-soft) inset;
+  }
+
+  .levels .level.is-on {
+    color: var(--lcd);
+    background: var(--ink-soft);
+    box-shadow: none;
+  }
+
+  #start-btn {
+    margin-top: 2px;
+    padding: 9px 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--lcd);
+    background: var(--ink);
+  }
+
+  #start-btn:hover { background: var(--ink-soft); }
+  #start-btn:active { transform: translateY(1px); }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .legend {
+    margin: 0;
+    font-size: 11px;
+    line-height: 2;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--case-text);
+  }
+
+  .legend b { color: var(--lcd); font-weight: 700; }
+
+  .pad {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+  }
+
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 38px);
+    grid-template-rows: repeat(3, 38px);
+    gap: 4px;
+  }
+
+  .pad button {
+    background: var(--key-face);
+    color: var(--lcd);
+    font-size: 13px;
+    line-height: 1;
+    box-shadow: 0 2px 0 var(--key);
+  }
+
+  .pad button:active { transform: translateY(2px); box-shadow: none; }
+
+  .dpad .up    { grid-area: 1 / 2; }
+  .dpad .left  { grid-area: 2 / 1; }
+  .dpad .down  { grid-area: 3 / 2; }
+  .dpad .right { grid-area: 2 / 3; }
+
+  /* 발사는 이동과 성격이 다른 동작이므로 십자키에서 떼어 원형 버튼으로 둔다 */
+  .fire {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button:active { transform: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="device">
+    <div class="brand">
+      <span>Tank</span>
+      <span class="model">hjPlayGround</span>
+    </div>
+
+    <div class="screen">
+      <div class="readout">
+        <span>Score <b id="score">0</b></span>
+        <span>Life <b id="life">0</b></span>
+        <span>Left <b id="left">0</b></span>
+      </div>
+
+      <div class="stage">
+        <canvas id="board" width="400" height="400"></canvas>
+        <div class="overlay" id="overlay">
+          <div class="title" id="overlay-title">Ready</div>
+          <div class="desc" id="overlay-desc"></div>
+          <div class="levels" id="levels" role="group" aria-label="난이도">
+            <button class="level is-on" data-level="easy" aria-pressed="true">쉬움</button>
+            <button class="level" data-level="normal" aria-pressed="false">보통</button>
+          </div>
+          <button id="start-btn">Start</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <p class="legend">
+        <b>← ↑ ↓ →</b> 이동<br>
+        <b>Space</b> 발사 · <b>P</b> 일시정지 · <b>R</b> 다시 시작
+      </p>
+      <div class="pad">
+        <div class="dpad">
+          <button class="up"    data-dir="up"    aria-label="위쪽으로 이동">▲</button>
+          <button class="left"  data-dir="left"  aria-label="왼쪽으로 이동">◀</button>
+          <button class="down"  data-dir="down"  aria-label="아래쪽으로 이동">▼</button>
+          <button class="right" data-dir="right" aria-label="오른쪽으로 이동">▶</button>
+        </div>
+        <button class="fire" id="fire-btn" aria-label="발사">FIRE</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('board');
+  var ctx = canvas.getContext('2d');
+
+  var TILE = 25;
+  var COLS = canvas.width / TILE;     // 16 x 16
+  var ROWS = canvas.height / TILE;
+  var TANK = 21;                      // 타일보다 조금 작아 통로에서 걸리지 않는다
+  var HALF = TANK / 2;
+
+  var scoreEl = document.getElementById('score');
+  var lifeEl = document.getElementById('life');
+  var leftEl = document.getElementById('left');
+  var overlay = document.getElementById('overlay');
+  var overlayTitle = document.getElementById('overlay-title');
+  var overlayDesc = document.getElementById('overlay-desc');
+  var levelsEl = document.getElementById('levels');
+  var startBtn = document.getElementById('start-btn');
+
+  var COLORS = (function () {
+    var s = getComputedStyle(document.documentElement);
+    return {
+      lcd:  s.getPropertyValue('--lcd').trim(),
+      grid: s.getPropertyValue('--lcd-dim').trim(),
+      ink:  s.getPropertyValue('--ink').trim(),
+      soft: s.getPropertyValue('--ink-soft').trim()
+    };
+  })();
+
+  // B = 벽돌(포탄에 부서짐), S = 강철(부서지지 않음). 위아래로 대칭인 전장.
+  var MAP = [
+    '................',
+    '..BB..BBBB..BB..',
+    '..BB..B..B..BB..',
+    '..BB..B..B..BB..',
+    '......B..B......',
+    '.BBSS......SSBB.',
+    '.BB..........BB.',
+    '......SSSS......',
+    '.BB..........BB.',
+    '.BBSS......SSBB.',
+    '......B..B......',
+    '..BB..B..B..BB..',
+    '..BB..B..B..BB..',
+    '..BB..BBBB..BB..',
+    '................',
+    '................'
+  ];
+
+  var LEVELS = {
+    easy: {
+      lives: 5, total: 8, maxAlive: 2,
+      playerSpeed: 95,  enemySpeed: 45,
+      playerBullet: 190, enemyBullet: 120,
+      playerReload: 380, enemyReload: 2000
+    },
+    normal: {
+      lives: 3, total: 12, maxAlive: 3,
+      playerSpeed: 120, enemySpeed: 72,
+      playerBullet: 250, enemyBullet: 185,
+      playerReload: 300, enemyReload: 1100
+    }
+  };
+
+  var BEST_KEY = 'tank.best';
+  var LEVEL_KEY = 'tank.level';
+
+  var DIRS = {
+    up:    { x: 0,  y: -1 },
+    down:  { x: 0,  y: 1  },
+    left:  { x: -1, y: 0  },
+    right: { x: 1,  y: 0  }
+  };
+
+  var SPAWNS = [{ c: 0, r: 0 }, { c: 8, r: 0 }, { c: 15, r: 0 }];
+
+  var levelName, level;
+  var tiles, player, enemies, bullets;
+  var score, lives, remaining, spawnQueue, spawnTimer, spawnIndex;
+  var state, lastTime;
+  var keys = {};
+
+  // ── 지형 ──────────────────────────────────────
+
+  function buildTiles() {
+    tiles = [];
+    for (var r = 0; r < ROWS; r++) {
+      tiles[r] = [];
+      for (var c = 0; c < COLS; c++) {
+        var ch = MAP[r].charAt(c);
+        tiles[r][c] = ch === 'B' ? 1 : ch === 'S' ? 2 : 0;
+      }
+    }
+  }
+
+  function tileAt(r, c) {
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return 2;   // 화면 밖은 강철벽 취급
+    return tiles[r][c];
+  }
+
+  function rectHitsWall(x, y, size) {
+    var h = size / 2;
+    if (x - h < 0 || y - h < 0 || x + h > canvas.width || y + h > canvas.height) return true;
+    var c0 = Math.floor((x - h) / TILE), c1 = Math.floor((x + h - 0.001) / TILE);
+    var r0 = Math.floor((y - h) / TILE), r1 = Math.floor((y + h - 0.001) / TILE);
+    for (var r = r0; r <= r1; r++) {
+      for (var c = c0; c <= c1; c++) {
+        if (tileAt(r, c) !== 0) return true;
+      }
+    }
+    return false;
+  }
+
+  function center(i) { return i * TILE + TILE / 2; }
+
+  // ── 탱크 ──────────────────────────────────────
+
+  function makeTank(c, r, dir, isPlayer) {
+    return {
+      x: center(c), y: center(r),
+      dir: DIRS[dir], dirName: dir,
+      isPlayer: isPlayer,
+      reload: 0,
+      think: 0,
+      invuln: isPlayer ? 1500 : 0
+    };
+  }
+
+  function tanksOverlap(t, x, y) {
+    var list = [player].concat(enemies);
+    for (var i = 0; i < list.length; i++) {
+      var o = list[i];
+      if (!o || o === t) continue;
+      if (Math.abs(o.x - x) < TANK && Math.abs(o.y - y) < TANK) return true;
+    }
+    return false;
+  }
+
+  function face(t, name) {
+    if (t.dirName === name) return;
+    var horizontal = name === 'left' || name === 'right';
+    var before = { x: t.x, y: t.y };
+    // 방향을 꺾을 때 통로 한가운데로 맞춰 준다 — 모서리에 걸려 멈추는 일을 없앤다
+    if (horizontal) t.y = center(Math.round((t.y - TILE / 2) / TILE));
+    else t.x = center(Math.round((t.x - TILE / 2) / TILE));
+    if (rectHitsWall(t.x, t.y, TANK)) { t.x = before.x; t.y = before.y; }
+    t.dirName = name;
+    t.dir = DIRS[name];
+  }
+
+  function moveTank(t, speed, dt) {
+    var d = speed * dt / 1000;
+    var nx = t.x + t.dir.x * d;
+    var ny = t.y + t.dir.y * d;
+    if (rectHitsWall(nx, ny, TANK) || tanksOverlap(t, nx, ny)) return false;
+    t.x = nx;
+    t.y = ny;
+    return true;
+  }
+
+  function fire(t, speed) {
+    if (t.reload > 0) return;
+    t.reload = t.isPlayer ? level.playerReload : level.enemyReload;
+    bullets.push({
+      x: t.x + t.dir.x * (HALF + 4),
+      y: t.y + t.dir.y * (HALF + 4),
+      dx: t.dir.x * speed,
+      dy: t.dir.y * speed,
+      vertical: t.dir.y !== 0,
+      fromPlayer: t.isPlayer
+    });
+  }
+
+  // ── 적 ────────────────────────────────────────
+
+  var DIR_NAMES = ['up', 'down', 'left', 'right'];
+
+  function updateEnemy(e, dt) {
+    e.think -= dt;
+
+    // 플레이어와 같은 줄에 서면 그쪽을 향해 쏜다
+    var alignedX = Math.abs(e.x - player.x) < TILE * 0.6;
+    var alignedY = Math.abs(e.y - player.y) < TILE * 0.6;
+    if (alignedX || alignedY) {
+      var want = alignedX ? (player.y > e.y ? 'down' : 'up') : (player.x > e.x ? 'right' : 'left');
+      face(e, want);
+      fire(e, level.enemyBullet);
+    }
+
+    if (!moveTank(e, level.enemySpeed, dt) || e.think <= 0) {
+      // 절반은 플레이어 쪽으로, 절반은 아무 방향으로 — 몰려다니지도, 스폰에 갇히지도 않게
+      if (Math.random() < 0.5) {
+        var dx = player.x - e.x, dy = player.y - e.y;
+        face(e, Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+      } else {
+        face(e, DIR_NAMES[Math.floor(Math.random() * 4)]);
+      }
+      e.think = 600 + Math.random() * 1200;
+    }
+  }
+
+  function trySpawn(dt) {
+    if (spawnQueue <= 0 || enemies.length >= level.maxAlive) return;
+    spawnTimer -= dt;
+    if (spawnTimer > 0) return;
+    spawnTimer = 1400;
+
+    // 스폰 지점을 번갈아 쓴다 — 한쪽 구석에서만 나오면 한 방향만 지키면 되어 버린다
+    for (var i = 0; i < SPAWNS.length; i++) {
+      var sp = SPAWNS[(spawnIndex + i) % SPAWNS.length];
+      var x = center(sp.c), y = center(sp.r);
+      if (rectHitsWall(x, y, TANK) || tanksOverlap(null, x, y)) continue;
+      enemies.push(makeTank(sp.c, sp.r, 'down', false));
+      spawnIndex = (spawnIndex + i + 1) % SPAWNS.length;
+      spawnQueue--;
+      return;
+    }
+  }
+
+  // ── 포탄 ──────────────────────────────────────
+
+  function updateBullets(dt) {
+    var playerHit = false;
+
+    for (var i = bullets.length - 1; i >= 0; i--) {
+      var b = bullets[i];
+      b.x += b.dx * dt / 1000;
+      b.y += b.dy * dt / 1000;
+
+      if (b.x < 0 || b.y < 0 || b.x > canvas.width || b.y > canvas.height) {
+        bullets.splice(i, 1);
+        continue;
+      }
+
+      var r = Math.floor(b.y / TILE), c = Math.floor(b.x / TILE);
+      var tile = tileAt(r, c);
+      if (tile === 1) { tiles[r][c] = 0; bullets.splice(i, 1); continue; }   // 벽돌은 부서진다
+      if (tile === 2) { bullets.splice(i, 1); continue; }
+
+      if (b.fromPlayer) {
+        for (var e = 0; e < enemies.length; e++) {
+          if (Math.abs(enemies[e].x - b.x) < HALF && Math.abs(enemies[e].y - b.y) < HALF) {
+            enemies.splice(e, 1);
+            bullets.splice(i, 1);
+            remaining--;
+            score += 100;
+            scoreEl.textContent = score;
+            leftEl.textContent = remaining;
+            if (remaining <= 0) return win();
+            break;
+          }
+        }
+      } else if (player.invuln <= 0 && !playerHit &&
+                 Math.abs(player.x - b.x) < HALF && Math.abs(player.y - b.y) < HALF) {
+        bullets.splice(i, 1);
+        playerHit = true;
+      }
+    }
+
+    // 순회가 끝난 뒤에 처리한다 — hitPlayer 가 bullets 를 통째로 갈아 끼우기 때문
+    if (playerHit) hitPlayer();
+  }
+
+  function hitPlayer() {
+    lives--;
+    lifeEl.textContent = lives;
+    if (lives <= 0) return gameOver();
+    player = makeTank(8, 14, 'up', true);
+    bullets = bullets.filter(function (b) { return b.fromPlayer; });
+  }
+
+  // ── 그리기 ────────────────────────────────────
+
+  function drawTiles() {
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        var t = tiles[r][c];
+        if (!t) continue;
+        var x = c * TILE, y = r * TILE;
+        ctx.fillStyle = COLORS.ink;
+        ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+        ctx.fillStyle = COLORS.lcd;
+        if (t === 1) {
+          // 벽돌 — 액정 색 줄눈으로 결을 낸다
+          ctx.fillRect(x + 1, y + TILE / 2 - 0.5, TILE - 2, 1);
+          ctx.fillRect(x + TILE / 2 - 0.5, y + 1, 1, TILE / 2 - 1);
+          ctx.fillRect(x + 1, y + TILE / 2, 1, TILE / 2 - 1);
+          ctx.fillRect(x + TILE - 2, y + TILE / 2, 1, TILE / 2 - 1);
+        } else {
+          // 강철 — 속이 빈 사각형
+          ctx.fillRect(x + 7, y + 7, TILE - 14, TILE - 14);
+        }
+      }
+    }
+  }
+
+  function drawTank(t) {
+    // 단색 화면이므로 아군은 속이 빈 탱크, 적군은 꽉 찬 탱크로 구분한다
+    var x = t.x - HALF, y = t.y - HALF;
+    ctx.fillStyle = COLORS.ink;
+    ctx.fillRect(x, y, TANK, TANK);
+    if (t.isPlayer) {
+      // 내 탱크는 속이 밝다 — 멀리서도 한눈에 내 것을 찾을 수 있게
+      ctx.fillStyle = COLORS.lcd;
+      ctx.fillRect(x + 3, y + 3, TANK - 6, TANK - 6);
+      ctx.fillStyle = COLORS.ink;
+      ctx.fillRect(t.x - 3, t.y - 3, 6, 6);
+    } else {
+      // 적 탱크는 통째로 어둡고 가운데만 뚫려 있다
+      ctx.fillStyle = COLORS.lcd;
+      ctx.fillRect(t.x - 2.5, t.y - 2.5, 5, 5);
+    }
+    // 포신 — 몸통 밖으로 7px 삐져나오게
+    ctx.fillStyle = COLORS.ink;
+    if (t.dirName === 'right')     ctx.fillRect(t.x + HALF, t.y - 2, 7, 4);
+    else if (t.dirName === 'left') ctx.fillRect(t.x - HALF - 7, t.y - 2, 7, 4);
+    else if (t.dirName === 'down') ctx.fillRect(t.x - 2, t.y + HALF, 4, 7);
+    else                           ctx.fillRect(t.x - 2, t.y - HALF - 7, 4, 7);
+  }
+
+  function draw() {
+    ctx.fillStyle = COLORS.lcd;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = COLORS.grid;
+    ctx.lineWidth = 1;
+    for (var i = 1; i < COLS; i++) {
+      var p = i * TILE + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(p, 0); ctx.lineTo(p, canvas.height);
+      ctx.moveTo(0, p); ctx.lineTo(canvas.width, p);
+      ctx.stroke();
+    }
+
+    drawTiles();
+
+    for (var e = 0; e < enemies.length; e++) drawTank(enemies[e]);
+
+    // 무적 시간에는 깜빡여서 아직 안전하다는 걸 알린다
+    if (player.invuln <= 0 || Math.floor(player.invuln / 150) % 2 === 0) drawTank(player);
+
+    // 포탄은 날아가는 방향으로 길쭉하게 — 점이 아니라 포탄으로 보이도록
+    ctx.fillStyle = COLORS.ink;
+    for (var b = 0; b < bullets.length; b++) {
+      var s = bullets[b];
+      if (s.vertical) ctx.fillRect(s.x - 1.5, s.y - 4, 3, 8);
+      else            ctx.fillRect(s.x - 4, s.y - 1.5, 8, 3);
+    }
+  }
+
+  // ── 진행 ──────────────────────────────────────
+
+  function update(dt) {
+    player.reload = Math.max(0, player.reload - dt);
+    player.invuln = Math.max(0, player.invuln - dt);
+
+    var held = keys.up ? 'up' : keys.down ? 'down' : keys.left ? 'left' : keys.right ? 'right' : null;
+    if (held) {
+      face(player, held);
+      moveTank(player, level.playerSpeed, dt);
+    }
+    if (keys.fire) fire(player, level.playerBullet);
+
+    for (var i = 0; i < enemies.length; i++) {
+      enemies[i].reload = Math.max(0, enemies[i].reload - dt);
+      updateEnemy(enemies[i], dt);
+    }
+
+    trySpawn(dt);
+    updateBullets(dt);
+  }
+
+  function loop(time) {
+    if (state !== 'playing') return;
+    if (!lastTime) lastTime = time;
+    var dt = Math.min(time - lastTime, 50);   // 탭을 다시 열었을 때 한 번에 건너뛰지 않도록
+    lastTime = time;
+
+    update(dt);
+    if (state !== 'playing') return;          // update 안에서 끝났으면 그 화면을 유지한다
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // ── 화면 ──────────────────────────────────────
+
+  function readBest() { return Number(localStorage.getItem(BEST_KEY + '.' + levelName) || 0); }
+
+  function saveBest() {
+    if (score > readBest()) {
+      try { localStorage.setItem(BEST_KEY + '.' + levelName, String(score)); } catch (e) { /* 무시 */ }
+    }
+  }
+
+  function setLevel(name) {
+    levelName = LEVELS[name] ? name : 'easy';
+    level = LEVELS[levelName];
+    try { localStorage.setItem(LEVEL_KEY, levelName); } catch (e) { /* 무시 */ }
+    Array.prototype.forEach.call(document.querySelectorAll('.level'), function (btn) {
+      var on = btn.dataset.level === levelName;
+      btn.classList.toggle('is-on', on);
+      btn.setAttribute('aria-pressed', String(on));
+    });
+  }
+
+  function showOverlay(title, desc, buttonLabel, withLevels) {
+    overlayTitle.textContent = title;
+    overlayDesc.innerHTML = desc;
+    startBtn.textContent = buttonLabel;
+    levelsEl.hidden = !withLevels;
+    overlay.hidden = false;
+    startBtn.focus();
+  }
+
+  function readyScreen() {
+    showOverlay(
+      'Ready',
+      '방향키로 움직이고 스페이스로 쏘세요.<br>적 탱크 <b>' + level.total + '</b>대를 모두 부수면 이깁니다.',
+      'Start', true);
+  }
+
+  function reset() {
+    buildTiles();
+    player = makeTank(8, 14, 'up', true);
+    enemies = [];
+    bullets = [];
+    keys = {};
+    score = 0;
+    lives = level.lives;
+    remaining = level.total;
+    spawnQueue = level.total;
+    spawnTimer = 0;
+    spawnIndex = 0;
+    scoreEl.textContent = score;
+    lifeEl.textContent = lives;
+    leftEl.textContent = remaining;
+  }
+
+  function start() {
+    reset();
+    state = 'playing';
+    overlay.hidden = true;
+    lastTime = 0;
+    requestAnimationFrame(loop);
+  }
+
+  function gameOver() {
+    state = 'over';
+    saveBest();
+    draw();
+    showOverlay('Game Over',
+      '탱크를 모두 잃었어요.<br>점수 <b>' + score + '</b> · 최고 <b>' + readBest() + '</b>',
+      'Retry', true);
+  }
+
+  function win() {
+    state = 'over';
+    score += lives * 200;                      // 남은 목숨은 점수로 돌려준다
+    scoreEl.textContent = score;
+    saveBest();
+    draw();
+    showOverlay('Cleared',
+      '적을 모두 물리쳤어요!<br>점수 <b>' + score + '</b> · 최고 <b>' + readBest() + '</b>',
+      'Retry', true);
+  }
+
+  function togglePause() {
+    if (state === 'playing') {
+      state = 'paused';
+      showOverlay('Paused', 'P 를 누르면<br>이어서 계속합니다.', 'Resume', false);
+    } else if (state === 'paused') {
+      state = 'playing';
+      overlay.hidden = true;
+      lastTime = 0;
+      requestAnimationFrame(loop);
+    }
+  }
+
+  // ── 입력 ──────────────────────────────────────
+
+  var KEYS = {
+    ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+    w: 'up', s: 'down', a: 'left', d: 'right',
+    W: 'up', S: 'down', A: 'left', D: 'right'
+  };
+
+  document.addEventListener('keydown', function (e) {
+    if (KEYS[e.key]) { e.preventDefault(); keys[KEYS[e.key]] = true; return; }
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (state === 'playing') keys.fire = true;
+      else if (state !== 'paused') start();
+      return;
+    }
+    if (e.key === 'p' || e.key === 'P') togglePause();
+    if (e.key === 'r' || e.key === 'R') start();
+  });
+
+  document.addEventListener('keyup', function (e) {
+    if (KEYS[e.key]) keys[KEYS[e.key]] = false;
+    if (e.key === ' ') keys.fire = false;
+  });
+
+  // 터치/마우스 조작 — 누르고 있는 동안 유지되어야 해서 down/up 을 따로 잡는다
+  function hold(el, prop) {
+    function on(e) { e.preventDefault(); keys[prop] = true; }
+    function off() { keys[prop] = false; }
+    el.addEventListener('pointerdown', on);
+    el.addEventListener('pointerup', off);
+    el.addEventListener('pointerleave', off);
+    el.addEventListener('pointercancel', off);
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.dpad button'), function (btn) {
+    hold(btn, btn.dataset.dir);
+  });
+  hold(document.getElementById('fire-btn'), 'fire');
+
+  Array.prototype.forEach.call(document.querySelectorAll('.level'), function (btn) {
+    btn.addEventListener('click', function () {
+      setLevel(btn.dataset.level);
+      state = 'ready';
+      reset();
+      draw();
+      readyScreen();
+    });
+  });
+
+  startBtn.addEventListener('click', function () {
+    if (state === 'paused') togglePause();
+    else start();
+  });
+
+  // ── 첫 화면 — 기본은 쉬움 ─────────────────────
+  state = 'ready';
+  setLevel(localStorage.getItem(LEVEL_KEY) || 'easy');
+  reset();
+  draw();
+  readyScreen();
+})();
+</script>
+</body>
+</html>
