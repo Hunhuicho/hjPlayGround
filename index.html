@@ -150,6 +150,29 @@
     outline-offset: 2px;
   }
 
+  .levels {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .levels[hidden] { display: none; }   /* display:flex 가 hidden 속성을 덮어쓰지 않도록 */
+
+  .levels .level {
+    padding: 7px 16px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+    background: transparent;
+    box-shadow: 0 0 0 1px var(--ink-soft) inset;
+  }
+
+  .levels .level.is-on {
+    color: var(--lcd);
+    background: var(--ink-soft);
+    box-shadow: none;
+  }
+
   #start-btn {
     margin-top: 2px;
     padding: 9px 20px;
@@ -228,6 +251,10 @@
         <div class="overlay" id="overlay">
           <div class="title" id="overlay-title">Ready</div>
           <div class="desc" id="overlay-desc">방향키로 뱀을 움직여<br>먹이를 먹으세요.</div>
+          <div class="levels" id="levels" role="group" aria-label="난이도">
+            <button class="level is-on" data-level="easy" aria-pressed="true">쉬움</button>
+            <button class="level" data-level="normal" aria-pressed="false">보통</button>
+          </div>
           <button id="start-btn">Start</button>
         </div>
       </div>
@@ -261,6 +288,7 @@
   var overlay = document.getElementById('overlay');
   var overlayTitle = document.getElementById('overlay-title');
   var overlayDesc = document.getElementById('overlay-desc');
+  var levelsEl = document.getElementById('levels');
   var startBtn = document.getElementById('start-btn');
 
   var DIRS = {
@@ -270,7 +298,14 @@
     right: { x: 1,  y: 0  }
   };
 
+  // 쉬움: 느리고, 빨라지지 않고, 벽을 통과해 반대편으로 나온다
+  var LEVELS = {
+    easy:   { tickMs: 260, minTickMs: 200, speedUp: 2, wrap: true,  points: 5  },
+    normal: { tickMs: 140, minTickMs: 70,  speedUp: 3, wrap: false, points: 10 }
+  };
+
   var BEST_KEY = 'snake.best';
+  var LEVEL_KEY = 'snake.level';
 
   // LCD 픽셀 색은 매 프레임 계산하지 않고 한 번만 읽어 둔다
   var COLORS = (function () {
@@ -284,16 +319,34 @@
   })();
 
   var snake, dir, queuedDir, food, score, best, state, tickMs, accumulator, lastTime;
+  var levelName, level;
 
-  best = Number(localStorage.getItem(BEST_KEY) || 0);
-  bestEl.textContent = best;
+  function readBest() {
+    // 난이도마다 점수 체계가 다르므로 최고 점수도 따로 기록한다
+    return Number(localStorage.getItem(BEST_KEY + '.' + levelName) || 0);
+  }
+
+  function setLevel(name) {
+    levelName = LEVELS[name] ? name : 'easy';
+    level = LEVELS[levelName];
+    try { localStorage.setItem(LEVEL_KEY, levelName); } catch (e) { /* 저장 불가 환경 무시 */ }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.level'), function (btn) {
+      var on = btn.dataset.level === levelName;
+      btn.classList.toggle('is-on', on);
+      btn.setAttribute('aria-pressed', String(on));
+    });
+
+    best = readBest();
+    bestEl.textContent = best;
+  }
 
   function reset() {
     snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
     dir = DIRS.right;
     queuedDir = null;
     score = 0;
-    tickMs = 140;
+    tickMs = level.tickMs;
     accumulator = 0;
     lastTime = 0;
     scoreEl.textContent = '0';
@@ -335,7 +388,12 @@
 
     var head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
 
-    if (head.x < 0 || head.x >= GRID || head.y < 0 || head.y >= GRID) return gameOver('벽에 부딪혔어요');
+    if (level.wrap) {
+      head.x = (head.x + GRID) % GRID;
+      head.y = (head.y + GRID) % GRID;
+    } else if (head.x < 0 || head.x >= GRID || head.y < 0 || head.y >= GRID) {
+      return gameOver('벽에 부딪혔어요');
+    }
 
     // 꼬리 끝 칸은 이번 틱에 비워지므로 충돌로 치지 않는다
     var ateFood = food && head.x === food.x && head.y === food.y;
@@ -347,9 +405,9 @@
     snake.unshift(head);
 
     if (ateFood) {
-      score += 10;
+      score += level.points;
       scoreEl.textContent = score;
-      if (tickMs > 70) tickMs -= 3;   // 먹을수록 조금씩 빨라진다
+      if (tickMs > level.minTickMs) tickMs -= level.speedUp;   // 먹을수록 조금씩 빨라진다
       placeFood();
       if (!food) return win();
     } else {
@@ -418,16 +476,25 @@
     if (score > best) {
       best = score;
       bestEl.textContent = best;
-      try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) { /* 저장 불가 환경 무시 */ }
+      try { localStorage.setItem(BEST_KEY + '.' + levelName, String(best)); } catch (e) { /* 저장 불가 환경 무시 */ }
     }
   }
 
-  function showOverlay(title, desc, buttonLabel) {
+  function showOverlay(title, desc, buttonLabel, withLevels) {
     overlayTitle.textContent = title;
     overlayDesc.innerHTML = desc;
     startBtn.textContent = buttonLabel;
+    // 일시정지 중에는 난이도를 못 바꾸게 한다 — 바꾸면 판이 초기화되므로
+    levelsEl.hidden = !withLevels;
     overlay.hidden = false;
     startBtn.focus();
+  }
+
+  function readyScreen() {
+    var desc = level.wrap
+      ? '방향키로 뱀을 움직여 먹이를 먹으세요.<br>벽을 지나가면 반대편에서 나옵니다.'
+      : '방향키로 뱀을 움직여 먹이를 먹으세요.<br>벽에 부딪히면 끝납니다.';
+    showOverlay('Ready', desc, 'Start', true);
   }
 
   function start() {
@@ -442,20 +509,20 @@
     state = 'over';
     saveBest();
     draw();
-    showOverlay('Game Over', reason + '<br>점수 <b>' + score + '</b>', 'Retry');
+    showOverlay('Game Over', reason + '<br>점수 <b>' + score + '</b>', 'Retry', true);
   }
 
   function win() {
     state = 'over';
     saveBest();
     draw();
-    showOverlay('Cleared', '판을 가득 채웠어요.<br>점수 <b>' + score + '</b>', 'Retry');
+    showOverlay('Cleared', '판을 가득 채웠어요.<br>점수 <b>' + score + '</b>', 'Retry', true);
   }
 
   function togglePause() {
     if (state === 'playing') {
       state = 'paused';
-      showOverlay('Paused', '스페이스바를 누르면<br>이어서 계속합니다.', 'Resume');
+      showOverlay('Paused', '스페이스바를 누르면<br>이어서 계속합니다.', 'Resume', false);
     } else if (state === 'paused') {
       state = 'playing';
       overlay.hidden = true;
@@ -491,6 +558,16 @@
     else start();
   });
 
+  Array.prototype.forEach.call(document.querySelectorAll('.level'), function (btn) {
+    btn.addEventListener('click', function () {
+      setLevel(btn.dataset.level);
+      state = 'ready';
+      reset();
+      draw();
+      readyScreen();
+    });
+  });
+
   Array.prototype.forEach.call(document.querySelectorAll('.dpad button'), function (btn) {
     btn.addEventListener('click', function () {
       if (state === 'playing') setDirection(btn.dataset.dir);
@@ -513,10 +590,12 @@
     else setDirection(dy > 0 ? 'down' : 'up');
   }, { passive: true });
 
-  // 첫 화면
+  // 첫 화면 — 기본은 쉬움
   state = 'ready';
+  setLevel(localStorage.getItem(LEVEL_KEY) || 'easy');
   reset();
   draw();
+  readyScreen();
 })();
 </script>
 </body>
