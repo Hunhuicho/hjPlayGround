@@ -374,7 +374,8 @@
     '................'
   ];
 
-  var FENCE = 1, ROCK = 2, HUT = 3, HUT_HIT = 4;
+  // 바위는 세 방을 맞아야 무너진다: ROCK -> ROCK_2 -> ROCK_1 -> 사라짐
+  var FENCE = 1, ROCK = 2, HUT = 3, HUT_HIT = 4, ROCK_2 = 5, ROCK_1 = 6;
 
   var LEVELS = {
     easy: {
@@ -572,20 +573,21 @@
       b.x += b.dx * dt / 1000;
       b.y += b.dy * dt / 1000;
 
-      if (b.x < 0 || b.y < 0 || b.x > canvas.width || b.y > canvas.height) {
+      if (b.x < 0 || b.y < 0 || b.x >= canvas.width || b.y >= canvas.height) {
         bullets.splice(i, 1);
         continue;
       }
 
       var r = Math.floor(b.y / TILE), c = Math.floor(b.x / TILE);
       var tile = tileAt(r, c);
-      if (tile === FENCE || tile === HUT_HIT) {    // 담장, 그리고 이미 한 번 맞은 막사
+      if (tile === FENCE || tile === HUT_HIT || tile === ROCK_1) {
         tiles[r][c] = 0;
         bullets.splice(i, 1);
         continue;
       }
-      if (tile === HUT) { tiles[r][c] = HUT_HIT; bullets.splice(i, 1); continue; }
-      if (tile === ROCK) { bullets.splice(i, 1); continue; }
+      if (tile === HUT)    { tiles[r][c] = HUT_HIT; bullets.splice(i, 1); continue; }
+      if (tile === ROCK)   { tiles[r][c] = ROCK_2;  bullets.splice(i, 1); continue; }
+      if (tile === ROCK_2) { tiles[r][c] = ROCK_1;  bullets.splice(i, 1); continue; }
 
       if (b.fromPlayer) {
         for (var e = 0; e < enemies.length; e++) {
@@ -710,26 +712,41 @@
     ctx.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
   }
 
-  // 바위 — 모난 덩어리. 네모가 아니어서 부술 수 없는 것임을 모양으로 알린다
-  function drawRock(x, y) {
+  // 바위 — 모난 덩어리. 맞을수록 조각이 떨어져 나가 작아진다
+  var ROCK_SHAPE = [10, 3, TILE - 5, 7, TILE - 2, 19, TILE - 11, TILE - 2, 5, TILE - 5, 2, 11];
+
+  function drawRock(x, y, stage) {
+    var k = stage === ROCK ? 1 : stage === ROCK_2 ? 0.78 : 0.54;
+    var mid = TILE / 2;
+
     ctx.beginPath();
-    ctx.moveTo(x + 10, y + 3);
-    ctx.lineTo(x + TILE - 5, y + 7);
-    ctx.lineTo(x + TILE - 2, y + 19);
-    ctx.lineTo(x + TILE - 11, y + TILE - 2);
-    ctx.lineTo(x + 5, y + TILE - 5);
-    ctx.lineTo(x + 2, y + 11);
+    for (var i = 0; i < ROCK_SHAPE.length; i += 2) {
+      var px = x + mid + (ROCK_SHAPE[i] - mid) * k;
+      var py = y + mid + (ROCK_SHAPE[i + 1] - mid) * k;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
     ctx.closePath();
     outlined(C.rock, 2);
 
     ctx.beginPath();
-    ctx.moveTo(x + 11, y + 7);
-    ctx.lineTo(x + TILE - 9, y + 10);
-    ctx.lineTo(x + TILE - 13, y + 15);
-    ctx.lineTo(x + 9, y + 12);
+    ctx.moveTo(x + mid + (11 - mid) * k, y + mid + (7 - mid) * k);
+    ctx.lineTo(x + mid + (TILE - 9 - mid) * k, y + mid + (10 - mid) * k);
+    ctx.lineTo(x + mid + (TILE - 13 - mid) * k, y + mid + (15 - mid) * k);
+    ctx.lineTo(x + mid + (9 - mid) * k, y + mid + (12 - mid) * k);
     ctx.closePath();
     ctx.fillStyle = C.rockLight;
     ctx.fill();
+
+    if (stage !== ROCK) {
+      // 금 — 몇 방 더 맞으면 무너진다는 신호
+      ctx.strokeStyle = C.outline;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x + mid - 5 * k, y + mid - 7 * k);
+      ctx.lineTo(x + mid + 1 * k, y + mid);
+      ctx.lineTo(x + mid - 3 * k, y + mid + 7 * k);
+      ctx.stroke();
+    }
   }
 
   function drawTiles() {
@@ -739,7 +756,7 @@
         if (!t) continue;
         var x = c * TILE, y = r * TILE;
         if (t === FENCE) drawFence(x, y);
-        else if (t === ROCK) drawRock(x, y);
+        else if (t === ROCK || t === ROCK_2 || t === ROCK_1) drawRock(x, y, t);
         else drawHut(x, y, r, c, t === HUT_HIT);
       }
     }
@@ -823,7 +840,7 @@
   var NEAR = 5;
   var FRAME = 22;        // 해치 테두리 두께
 
-  var HEIGHT = { fence: 14, rock: 27, hut: 56, rubble: 22, edge: 46 };
+  var HEIGHT = { rubble: 22, edge: 46 };   // 담장·바위·막사는 각자 그리는 쪽에서 높이를 정한다
 
   var cam = { x: 0, y: 0, fx: 0, fy: -1, rx: 1, ry: 0 };
 
@@ -948,6 +965,96 @@
     return localPts(t, list);
   }
 
+  // 같은 칸은 언제나 같은 모양이어야 해서 좌표로부터 값을 뽑아 쓴다 (난수는 매 프레임 흔들린다)
+  function jitter(a, b, k) {
+    var n = Math.sin(a * 127.1 + b * 311.7 + k * 74.7) * 43758.5453;
+    return n - Math.floor(n);
+  }
+
+  function quad(pts, color) {
+    var out = [];
+    for (var i = 0; i < pts.length; i += 3) out.push(P(pts[i], pts[i + 1], pts[i + 2]));
+    fillPoly(out, color);
+  }
+
+  // ── 바위 — 칸마다 다르게 찌그러진 다면체 ──────
+  function rockFace(x, y, r, c, radius, n) {
+    var pts = [], mid = TILE / 2;
+    for (var i = 0; i < n; i++) {
+      var a = (i / n) * Math.PI * 2 + (jitter(r, c, i) - 0.5) * 0.55;
+      var rad = radius * (0.78 + jitter(c, r, i + 17) * 0.34);
+      pts.push({ x: x + mid + Math.cos(a) * rad, y: y + mid + Math.sin(a) * rad });
+    }
+    return pts;
+  }
+
+  function drawRock3D(x, y, r, c, stage) {
+    var k = stage === ROCK ? 1 : stage === ROCK_2 ? 0.78 : 0.54;
+    var tall = (16 + jitter(r, c, 3) * 8) * k;
+    drawPrism(rockFace(x, y, r, c, 13 * k, 7), 0, tall, C.rock);
+    if (stage !== ROCK_1) {
+      // 위에 한 덩이 더 얹어 둥근 바위처럼 보이게
+      drawPrism(rockFace(x, y, c, r, 8 * k, 6), tall, tall + 8 * k, C.rockLight);
+    }
+  }
+
+  function drawRubble3D(x, y, r, c) {
+    drawPrism(rockFace(x, y, r, c, 12, 6), 0, HEIGHT.rubble, C.roofDark);
+    drawPrism(rockFace(x, y, c + 5, r, 7, 5), HEIGHT.rubble, HEIGHT.rubble + 5, C.wall);
+  }
+
+  // ── 담장 — 기둥 두 개에 가로대 두 줄 ──────────
+  function drawFence3D(x, y, r, c) {
+    var horiz = tileAt(r, c - 1) === FENCE || tileAt(r, c + 1) === FENCE;
+    var mid = TILE / 2;
+
+    function post(px, py) {
+      drawPrism([{ x: px - 3, y: py - 3 }, { x: px + 3, y: py - 3 },
+                 { x: px + 3, y: py + 3 }, { x: px - 3, y: py + 3 }], 0, 17, C.woodDark);
+    }
+
+    function rail(h0, h1) {
+      var a = horiz ? { x: x, y: y + mid - 2 } : { x: x + mid - 2, y: y };
+      var b = horiz ? { x: x + TILE, y: y + mid + 2 } : { x: x + mid + 2, y: y + TILE };
+      drawPrism([{ x: a.x, y: a.y }, { x: b.x, y: a.y },
+                 { x: b.x, y: b.y }, { x: a.x, y: b.y }], h0, h1, C.wood);
+    }
+
+    rail(4, 8);
+    rail(11, 15);
+    if (horiz) { post(x + 6, y + mid); post(x + TILE - 6, y + mid); }
+    else       { post(x + mid, y + 6); post(x + mid, y + TILE - 6); }
+  }
+
+  // ── 막사 — 벽 위에 경사 지붕. 이웃한 칸과 맞닿는 면은 그리지 않아
+  //    2x2 가 한 채의 건물로 이어져 보인다.
+  function drawHut3D(x, y, r, c) {
+    var x1 = x + TILE, y1 = y + TILE, ym = y + TILE / 2;
+    var WALL_H = 34, RIDGE_H = 52;
+    var openN = tileAt(r - 1, c) !== HUT, openS = tileAt(r + 1, c) !== HUT;
+    var openW = tileAt(r, c - 1) !== HUT, openE = tileAt(r, c + 1) !== HUT;
+
+    if (openN && cam.y < y)  quad([x, y, WALL_H, x1, y, WALL_H, x1, y, 0, x, y, 0], C.wall);
+    if (openS && cam.y > y1) quad([x1, y1, WALL_H, x, y1, WALL_H, x, y1, 0, x1, y1, 0], C.wall);
+    if (openW && cam.x < x)  quad([x, y1, WALL_H, x, y, WALL_H, x, y, 0, x, y1, 0], shade(C.wall, 0.86));
+    if (openE && cam.x > x1) quad([x1, y, WALL_H, x1, y1, WALL_H, x1, y1, 0, x1, y, 0], shade(C.wall, 0.86));
+
+    // 남쪽으로 열린 벽에는 문을 달아 건물임을 알아보게 한다
+    if (openS && cam.y > y1) {
+      quad([x + 11, y1 + 0.4, 20, x + 21, y1 + 0.4, 20, x + 21, y1 + 0.4, 0, x + 11, y1 + 0.4, 0],
+           C.woodDark);
+    }
+
+    // 지붕 — 용마루가 동서로 지나가는 박공. 먼 쪽 경사면부터 얹는다.
+    var north = [x, y, WALL_H, x1, y, WALL_H, x1, ym, RIDGE_H, x, ym, RIDGE_H];
+    var south = [x, y1, WALL_H, x1, y1, WALL_H, x1, ym, RIDGE_H, x, ym, RIDGE_H];
+    if (cam.y < ym) { quad(south, shade(C.roof, 0.8)); quad(north, C.roof); }
+    else            { quad(north, shade(C.roof, 0.8)); quad(south, C.roof); }
+
+    if (openW && cam.x < x)  quad([x, y, WALL_H, x, y1, WALL_H, x, ym, RIDGE_H], shade(C.wall, 0.92));
+    if (openE && cam.x > x1) quad([x1, y, WALL_H, x1, y1, WALL_H, x1, ym, RIDGE_H], shade(C.wall, 0.92));
+  }
+
   function drawEnemy3D(t) {
     // 무한궤도 두 줄 — 어두운 궤도 위에 밝은 상부 주행부를 얹어 결을 낸다
     for (var side = -1; side <= 1; side += 2) {
@@ -1052,7 +1159,8 @@
       for (var c = 0; c < COLS; c++) {
         var t = tiles[r][c];
         if (!t) continue;
-        ctx.fillStyle = t === ROCK ? C.rock : t === FENCE ? C.wood : C.roof;
+        ctx.fillStyle = (t === ROCK || t === ROCK_2 || t === ROCK_1) ? C.rock
+                      : t === FENCE ? C.wood : C.roof;
         ctx.fillRect(mx + c * S, my + r * S, S, S);
       }
     }
@@ -1089,19 +1197,10 @@
         (function (t, r, c) {
           var x = c * TILE, y = r * TILE;
           push(x + TILE / 2, y + TILE / 2, function () {
-            if (t === FENCE) {
-              drawBox(x + 3, y + 3, x + TILE - 3, y + TILE - 3, 0, HEIGHT.fence, C.wood);
-              drawBox(x + 1, y + 1, x + TILE - 1, y + TILE - 1,
-                      HEIGHT.fence, HEIGHT.fence + 3, C.woodDark);
-            } else if (t === ROCK) {
-              drawBox(x + 4, y + 4, x + TILE - 4, y + TILE - 4, 0, 18, C.rock);
-              drawBox(x + 9, y + 9, x + TILE - 9, y + TILE - 9, 18, HEIGHT.rock, C.rockLight);
-            } else if (t === HUT_HIT) {
-              drawBox(x + 2, y + 2, x + TILE - 2, y + TILE - 2, 0, HEIGHT.rubble, C.roofDark);
-            } else {
-              drawBox(x, y, x + TILE, y + TILE, 0, 40, C.wall);
-              drawBox(x - 1, y - 1, x + TILE + 1, y + TILE + 1, 40, HEIGHT.hut, C.roof);
-            }
+            if (t === FENCE) drawFence3D(x, y, r, c);
+            else if (t === HUT) drawHut3D(x, y, r, c);
+            else if (t === HUT_HIT) drawRubble3D(x, y, r, c);
+            else drawRock3D(x, y, r, c, t);
           });
         })(t, r, c);
       }
@@ -1231,7 +1330,7 @@
       'Ready',
       '방향키로 움직이고 스페이스로 쏘세요.<br>' +
       '적 탱크 <b>' + level.total + '</b>대를 모두 부수면 이깁니다.<br>' +
-      '담장과 막사는 부서지지만 바위는 못 뚫어요.',
+      '담장은 한 방, 막사는 두 방, 바위는 세 방이면 부서져요.',
       'Start', true);
   }
 
