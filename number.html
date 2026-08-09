@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>숫자 맞히기 — 미니게임</title>
+<title>숫자 길 — 갈림길 미니게임</title>
 <style>
-  /* 주머니 계산기. 스네이크의 흑백 LCD 와 구분되도록 어두운 케이스에 호박색 형광표시관을
-     얹었다. 화면 자체가 하나의 사물이므로 단일 테마로 확정하고, 배경과 모든 색을 명시해
+  /* 어두운 손바닥 기기 안에, 색색의 블록으로 깔린 길이 흐른다.
+     화면 자체가 하나의 사물이므로 단일 테마로 확정하고, 배경과 모든 색을 명시해
      호스트 테마와 무관하게 같은 모습으로 보이게 한다. */
   :root {
     --case:        #14151a;
@@ -14,14 +14,15 @@
     --case-edge:   #43464f;
     --case-shadow: #0a0b0e;
     --case-text:   #9aa0ad;   /* 케이스 위 각인 — 어두운 플라스틱에서 5.2:1 */
-    --vfd:         #0c0d0b;   /* 표시관 유리 */
-    --vfd-edge:    #1e2019;
-    --amber:       #ffb545;
-    --amber-soft:  #c98a34;
-    --amber-faint: #6d4d20;
+    --screen:      #0b0c10;
+    --screen-edge: #1c1e26;
+    --ink:         #ffd48a;
+    --ink-soft:    #c2a173;
+    --ink-faint:   #6f6047;
+    --good:        #6fd08c;
+    --bad:         #ff6a4d;
     --key:         #1d1f25;
     --key-face:    #363943;
-    --key-accent:  #b4712a;
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
   }
 
@@ -31,7 +32,7 @@
 
   body {
     background: var(--case);
-    color: var(--amber);
+    color: var(--ink);
     font-family: var(--mono);
     display: flex;
     align-items: center;
@@ -45,8 +46,8 @@
   .device {
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    padding: 22px;
+    gap: 16px;
+    padding: 20px;
     border-radius: 18px;
     background: var(--case-face);
     border: 1px solid var(--case-edge);
@@ -56,7 +57,7 @@
   /* ── 케이스 상단 각인 ─────────────────────────── */
   .brand {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 16px;
     font-size: 11px;
@@ -67,137 +68,100 @@
 
   .brand .model { letter-spacing: 0.14em; opacity: 0.7; }
 
-  /* ── 표시관 ───────────────────────────────────── */
+  /* ── 화면 ─────────────────────────────────────── */
   .screen {
-    padding: 14px;
+    padding: 12px;
     border-radius: 6px;
-    background: var(--vfd);
+    background: var(--screen);
     box-shadow: 0 2px 8px var(--case-shadow) inset, 0 0 0 2px var(--case-shadow);
   }
 
   .readout {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: baseline;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--vfd-edge);
-    font-size: 11px;
-    letter-spacing: 0.18em;
+    gap: 8px;
+    padding-bottom: 8px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--amber-soft);
+    color: var(--ink-soft);
   }
 
   .readout b {
-    margin-left: 8px;
-    font-size: 17px;
+    margin-left: 5px;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  /* 상점은 화면 한구석에 작은 아이콘으로만 둔다 */
+  .shop-btn {
+    position: relative;
+    flex: none;
+    width: 26px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    color: var(--ink-soft);
+    background: transparent;
+    box-shadow: 0 0 0 1px var(--ink-faint) inset;
+  }
+
+  .shop-btn:hover { color: var(--ink); }
+  .shop-btn svg { width: 14px; height: 14px; display: block; }
+
+  .shop-btn .badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 13px;
+    height: 13px;
+    padding: 0 3px;
+    border-radius: 7px;
+    font-size: 9px;
+    line-height: 13px;
+    font-weight: 700;
+    color: #0b0c10;
+    background: var(--good);
+  }
+
+  .shop-btn .badge[hidden] { display: none; }
+
+  .quiz {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px 8px;
+    margin-bottom: 9px;
+    border-top: 1px solid var(--screen-edge);
+    border-bottom: 1px solid var(--screen-edge);
+    text-align: center;
+  }
+
+  .quiz .where {
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    color: var(--ink-faint);
+  }
+
+  .quiz .ask {
+    font-size: 13.5px;
     letter-spacing: 0.06em;
     font-variant-numeric: tabular-nums;
-    color: var(--amber);
+    color: var(--ink-soft);
+    word-break: keep-all;
   }
 
   .stage {
     position: relative;
     width: min(78vw, 360px);
-    min-height: 226px;
-    display: flex;
-    flex-direction: column;
+    aspect-ratio: 360 / 360;
   }
 
-  /* ── 표시관 본문 ──────────────────────────────── */
-  .panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .range {
-    font-size: 11px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--amber-soft);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .entry {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 4px;
-    padding: 6px 0 2px;
-    font-size: 46px;
-    line-height: 1.1;
-    letter-spacing: 0.1em;
-    font-variant-numeric: tabular-nums;
-    color: var(--amber);
-    text-shadow: 0 0 14px rgba(255, 181, 69, 0.35);
-  }
-
-  .entry.is-empty { color: var(--amber-faint); text-shadow: none; }
-
-  /* 커서는 값을 넣기 전에만 깜빡여, 지금 입력을 받는 중임을 알린다 */
-  .entry .caret {
-    width: 3px;
-    height: 34px;
-    background: var(--amber);
-    animation: blink 1.1s steps(1, end) infinite;
-  }
-
-  .entry .caret[hidden] { display: none; }
-
-  @keyframes blink { 50% { opacity: 0; } }
-
-  .hint {
-    min-height: 40px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    text-align: center;
-  }
-
-  .hint .verdict {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    color: var(--amber);
-  }
-
-  .hint .warmth {
-    font-size: 11.5px;
-    letter-spacing: 0.08em;
-    color: var(--amber-soft);
-  }
-
-  /* ── 지난 시도 ────────────────────────────────── */
-  .history {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    justify-content: center;
-    min-height: 26px;
-    margin-top: auto;
-    padding-top: 10px;
-    border-top: 1px solid var(--vfd-edge);
-  }
-
-  .history .past {
-    padding: 3px 7px;
-    border-radius: 3px;
-    font-size: 11.5px;
-    letter-spacing: 0.04em;
-    font-variant-numeric: tabular-nums;
-    color: var(--amber-soft);
-    box-shadow: 0 0 0 1px var(--vfd-edge) inset;
-  }
-
-  .history .past.hit {
-    color: var(--vfd);
-    background: var(--amber);
-    box-shadow: none;
-  }
+  canvas { width: 100%; height: 100%; display: block; }
 
   /* ── 화면 위 메시지 ───────────────────────────── */
   .overlay {
@@ -207,35 +171,89 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 18px;
+    gap: 10px;
+    padding: 13px;
+    overflow-y: auto;
     text-align: center;
-    background: var(--vfd);
-    color: var(--amber);
+    background: rgba(11, 12, 16, 0.95);
+    color: var(--ink);
   }
 
   .overlay[hidden] { display: none; }
 
   .overlay .title {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    letter-spacing: 0.1em;
     text-wrap: balance;
   }
 
+  .overlay .title.is-bad  { color: var(--bad); }
+  .overlay .title.is-good { color: var(--good); }
+
   .overlay .desc {
-    font-size: 12.5px;
-    line-height: 1.75;
-    color: var(--amber-soft);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    word-break: keep-all;
   }
 
   .overlay .desc b {
-    color: var(--amber);
+    color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
 
-  /* ── 조작부 ───────────────────────────────────── */
+  .overlay .desc[hidden], .choices[hidden], .actions[hidden] { display: none; }
+
+  /* ── 고르기 ───────────────────────────────────── */
+  .choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .choices button {
+    padding: 7px 10px;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    background: transparent;
+    box-shadow: 0 0 0 1px var(--ink-faint) inset;
+    word-break: keep-all;
+  }
+
+  .choices button:hover { background: #1a1c24; }
+
+  .choices button .no {
+    margin-right: 5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faint);
+  }
+
+  /* ── 상점 진열 ────────────────────────────────── */
+  .choices.wardrobe button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    width: 74px;
+    padding: 6px 3px 5px;
+    font-size: 9.5px;
+    line-height: 1.3;
+    color: var(--ink-soft);
+  }
+
+  .choices.wardrobe button canvas { width: 34px; height: 42px; }
+
+  .choices.wardrobe button.is-locked { opacity: 0.5; }
+  .choices.wardrobe button.is-worn {
+    color: var(--good);
+    box-shadow: 0 0 0 1px var(--good) inset;
+  }
+
+  /* ── 단추 ─────────────────────────────────────── */
   button {
     font: inherit;
     cursor: pointer;
@@ -244,167 +262,144 @@
   }
 
   button:focus-visible {
-    outline: 2px solid var(--amber);
+    outline: 2px solid var(--ink);
     outline-offset: 2px;
   }
 
-  .levels {
+  .actions {
     display: flex;
     gap: 6px;
-    margin-top: 2px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 
-  .levels[hidden] { display: none; }   /* display:flex 가 hidden 속성을 덮어쓰지 않도록 */
-
-  .levels .level {
-    padding: 7px 14px;
-    font-size: 12px;
-    letter-spacing: 0.06em;
-    color: var(--amber);
-    background: transparent;
-    box-shadow: 0 0 0 1px var(--amber-faint) inset;
-  }
-
-  .levels .level.is-on {
-    color: var(--vfd);
-    background: var(--amber);
-    box-shadow: none;
-  }
-
-  #start-btn {
-    margin-top: 2px;
-    padding: 9px 20px;
+  .actions .go {
+    padding: 9px 18px;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--vfd);
-    background: var(--amber);
+    color: #0b0c10;
+    background: var(--ink);
   }
 
-  #start-btn:hover { background: var(--amber-soft); }
-  #start-btn:active { transform: translateY(1px); }
+  .actions .go:hover { background: var(--ink-soft); }
+
+  .actions .sub {
+    padding: 8px 12px;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    background: transparent;
+    box-shadow: 0 0 0 1px var(--ink-faint) inset;
+  }
+
+  .actions .sub:hover { color: var(--ink); }
+  .actions button:active { transform: translateY(1px); }
 
   .controls {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: 16px;
   }
 
   .legend {
     margin: 0;
-    font-size: 11px;
-    line-height: 2;
-    letter-spacing: 0.06em;
+    font-size: 10.5px;
+    line-height: 1.95;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--case-text);
   }
 
-  .legend b { color: var(--amber); font-weight: 700; }
+  .legend b { color: var(--ink); font-weight: 700; }
 
-  .keypad {
-    display: grid;
-    grid-template-columns: repeat(3, 46px);
-    gap: 5px;
+  .pads {
+    display: flex;
+    gap: 6px;
     flex: none;
   }
 
-  .keypad button {
-    height: 38px;
+  .pads button {
+    width: 54px;
+    height: 46px;
     background: var(--key-face);
-    color: var(--amber);
-    font-size: 14px;
+    color: var(--ink);
+    font-size: 15px;
     line-height: 1;
-    box-shadow: 0 2px 0 var(--key);
+    box-shadow: 0 3px 0 var(--key);
   }
 
-  .keypad button:active { transform: translateY(2px); box-shadow: none; }
-
-  .keypad .wide { grid-column: span 2; }
-
-  .keypad .enter {
-    color: var(--vfd);
-    background: var(--amber);
-    font-size: 12px;
+  .pads .jump {
+    width: 62px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.14em;
-    box-shadow: 0 2px 0 var(--key-accent);
+    letter-spacing: 0.1em;
   }
 
-  @media (max-width: 400px) {
-    .controls { flex-direction: column; align-items: center; gap: 14px; }
+  .pads button:active { transform: translateY(3px); box-shadow: none; }
+
+  @media (max-width: 420px) {
+    .controls { flex-direction: column; gap: 12px; }
     .legend { text-align: center; }
+    .pads button { width: 64px; height: 52px; }
+    .pads .jump { width: 76px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     button:active { transform: none; }
-    .entry .caret { animation: none; }
   }
 </style>
 </head>
 <body>
   <div class="device">
     <div class="brand">
-      <span>Number</span>
+      <span>Number Path</span>
       <span class="model">hjPlayGround</span>
     </div>
 
     <div class="screen">
       <div class="readout">
-        <span>Score <b id="score">0</b></span>
-        <span>Best <b id="best">0</b></span>
+        <span>스테이지 <b id="stage-no">1/5</b></span>
+        <span>문제 <b id="gate-no">0/4</b></span>
+        <span>최고 <b id="best">0</b></span>
+        <button class="shop-btn" id="shop-btn" aria-label="상점 열기" title="상점">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 8h16l-1.2 12H5.2L4 8z"/>
+            <path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/>
+          </svg>
+          <span class="badge" id="shop-badge" hidden>1</span>
+        </button>
+      </div>
+
+      <div class="quiz" role="status" aria-live="polite">
+        <span class="where" id="where">단원을 고르세요</span>
+        <span class="ask" id="quiz">—</span>
       </div>
 
       <div class="stage">
-        <div class="panel">
-          <div class="range" id="range">1 – 50 · 남은 기회 10</div>
-
-          <div class="entry is-empty" id="entry">
-            <span id="entry-digits">‒‒</span><span class="caret" id="caret" hidden></span>
-          </div>
-
-          <div class="hint" id="hint" role="status" aria-live="polite">
-            <div class="verdict" id="verdict"></div>
-            <div class="warmth" id="warmth"></div>
-          </div>
-
-          <div class="history" id="history" aria-label="지난 시도"></div>
-        </div>
-
+        <canvas id="board" width="720" height="720"></canvas>
         <div class="overlay" id="overlay">
-          <div class="title" id="overlay-title">Ready</div>
-          <div class="desc" id="overlay-desc">숨겨진 숫자를 맞혀 보세요.<br>넣을 때마다 위인지 아래인지 알려줍니다.</div>
-          <div class="levels" id="levels" role="group" aria-label="난이도">
-            <button class="level is-on" data-level="easy" aria-pressed="true">쉬움</button>
-            <button class="level" data-level="normal" aria-pressed="false">보통</button>
-            <button class="level" data-level="hard" aria-pressed="false">어려움</button>
-          </div>
-          <button id="start-btn">Start</button>
+          <div class="title" id="overlay-title">어디까지 배웠나요?</div>
+          <div class="desc" id="overlay-desc"></div>
+          <div class="choices" id="choices"></div>
+          <div class="actions" id="actions"></div>
         </div>
       </div>
     </div>
 
     <div class="controls">
       <p class="legend">
-        <b>0 – 9</b> 숫자 입력<br>
-        <b>Enter</b> 넣기 · <b>Backspace</b> 지우기<br>
-        <b>R</b> 다시 시작
+        <b>←</b> 왼쪽 길 · <b>→</b> 오른쪽 길<br>
+        <b>↑</b> 또는 <b>Space</b> 점프<br>
+        <b>P</b> 일시정지 · <b>R</b> 다시 시작
       </p>
-      <div class="keypad" id="keypad">
-        <button data-digit="1">1</button>
-        <button data-digit="2">2</button>
-        <button data-digit="3">3</button>
-        <button data-digit="4">4</button>
-        <button data-digit="5">5</button>
-        <button data-digit="6">6</button>
-        <button data-digit="7">7</button>
-        <button data-digit="8">8</button>
-        <button data-digit="9">9</button>
-        <button data-digit="0">0</button>
-        <button class="wide enter" data-act="submit">Enter</button>
-        <button class="wide" data-act="clear" aria-label="입력 지우기">← 지우기</button>
-        <button data-act="restart" aria-label="다시 시작">R</button>
+      <div class="pads">
+        <button data-side="-1" aria-label="왼쪽 길로">◀</button>
+        <button class="jump" data-act="jump" aria-label="점프">JUMP</button>
+        <button data-side="1" aria-label="오른쪽 길로">▶</button>
       </div>
     </div>
   </div>
@@ -413,270 +408,1578 @@
 (function () {
   'use strict';
 
-  var scoreEl = document.getElementById('score');
+  // ══ 문제 만들기 ═══════════════════════════════
+  function ri(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function fmt(n) { return String(n).replace('-', '−'); }        // 빼기표는 하이픈이 아니라 −
+  function Q(text, answer, decoy) { return { text: text, answer: answer, decoy: decoy }; }
+  function dec(n) { return (n / 10).toFixed(1); }                // 소수는 정수로 셈하고 마지막에 나눈다
+
+  function mix() {
+    var gens = Array.prototype.slice.call(arguments);
+    return function () { return pick(gens)(); };
+  }
+
+  // 고정 문답 목록에서 하나 뽑는다 — 도형의 개수처럼 셈이 아닌 것들에 쓴다
+  function facts(list) {
+    return function () { var f = pick(list); return Q(f[0], f[1]); };
+  }
+
+  function gAdd(a1, a2, b1, b2) {
+    return function () { var a = ri(a1, a2), b = ri(b1, b2); return Q(a + ' + ' + b, a + b); };
+  }
+
+  function gSub(a1, a2) {
+    return function () { var a = ri(a1, a2), b = ri(1, a - 1); return Q(a + ' − ' + b, a - b); };
+  }
+
+  function gMul(a1, a2, b1, b2) {
+    return function () { var a = ri(a1, a2), b = ri(b1, b2); return Q(a + ' × ' + b, a * b); };
+  }
+
+  function gDiv(q1, q2, b1, b2) {
+    // 나누어떨어지도록 몫을 먼저 정하고 거꾸로 문제를 만든다
+    return function () { var q = ri(q1, q2), b = ri(b1, b2); return Q((q * b) + ' ÷ ' + b, q); };
+  }
+
+  function gNumSense(lo, hi) {
+    return function () {
+      var n = ri(lo + 1, hi - 1);
+      var t = ri(0, 2);
+      if (t === 0) return Q(n + ' 다음 수', n + 1);
+      if (t === 1) return Q(n + ' 앞의 수', n - 1);
+      var m = ri(lo, hi);
+      while (m === n) m = ri(lo, hi);
+      return Q(n + '과 ' + m + ' 중 큰 수', Math.max(n, m), Math.min(n, m));
+    };
+  }
+
+  function gBundle(hi) {
+    return function () {
+      var t = ri(1, Math.floor(hi / 10) - 1), o = ri(1, 9);
+      return Q('10개씩 ' + t + '묶음, 낱개 ' + o, t * 10 + o);
+    };
+  }
+
+  function gPlace(digits) {
+    var names = ['일', '십', '백', '천'];
+    return function () {
+      var s = '';
+      for (var i = 0; i < digits; i++) s += (i === 0 ? ri(1, 9) : ri(0, 9));
+      var d = ri(0, digits - 1);
+      return Q(s + ' 의 ' + names[d] + '의 자리 숫자', Number(s[digits - 1 - d]));
+    };
+  }
+
+  function gSeq() {
+    return function () {
+      var a = ri(1, 9), d = ri(2, 6), s = [];
+      for (var i = 0; i < 4; i++) s.push(a + d * i);
+      return Q(s.join(', ') + ', ?', a + d * 4);
+    };
+  }
+
+  function gSum3() {
+    return function () {
+      var a = ri(3, 20), b = ri(3, 20), c = ri(3, 20);
+      return Q(a + ' + ' + b + ' + ' + c, a + b + c);
+    };
+  }
+
+  function gFracAdd() {          // 분모가 같은 분수의 덧셈 — 분모까지 더하는 실수를 곁길로 놓는다
+    var d = ri(4, 9), a = ri(1, d - 2), b = ri(1, d - a);
+    return Q(a + '/' + d + ' + ' + b + '/' + d, (a + b) + '/' + d, (a + b) + '/' + (d * 2));
+  }
+
+  function gFracSub() {
+    var d = ri(4, 9), a = ri(2, d), b = ri(1, a - 1);
+    return Q(a + '/' + d + ' − ' + b + '/' + d, (a - b) + '/' + d, (a - b) + '/' + (d - b));
+  }
+
+  function gFracUnlike() {       // 분모가 다른 분수의 덧셈
+    var d1 = ri(2, 5), d2 = d1 * ri(2, 3);
+    var a = ri(1, d1 - 1), b = ri(1, d2 - 1);
+    var top = a * (d2 / d1) + b;
+    return Q(a + '/' + d1 + ' + ' + b + '/' + d2, top + '/' + d2, (a + b) + '/' + d2);
+  }
+
+  function gFracOfNum() {        // 전체의 몇 분의 몇
+    var d = pick([2, 3, 4, 5, 6]), n = ri(1, d - 1), unit = ri(2, 9);
+    return Q((d * unit) + ' 의 ' + n + '/' + d, n * unit);
+  }
+
+  function gFracDivInt() {       // (분수) ÷ (자연수)
+    var d = ri(3, 9), k = ri(2, 4), a = ri(1, 3) * k;
+    while (a >= d) { a -= k; }
+    if (a < k) a = k;
+    return Q(a + '/' + d + ' ÷ ' + k, (a / k) + '/' + d, a + '/' + (d * k));
+  }
+
+  function gFracDivFrac() {      // (분수) ÷ (분수) — 분모가 같아 몫이 자연수로 떨어지게
+    var d = ri(3, 9), b = ri(1, 3), q = ri(2, 5);
+    return Q((b * q) + '/' + d + ' ÷ ' + b + '/' + d, q);
+  }
+
+  function gDecAdd() { var a = ri(11, 89), b = ri(11, 89); return Q(dec(a) + ' + ' + dec(b), dec(a + b), dec(a + b + 10)); }
+  function gDecSub() { var a = ri(30, 99), b = ri(11, a - 5); return Q(dec(a) + ' − ' + dec(b), dec(a - b), dec(a - b + 10)); }
+  function gDecMul() { var a = ri(2, 9), b = ri(2, 9); return Q(dec(a) + ' × ' + b, dec(a * b), dec(a * b + 10)); }
+  function gDecDiv() { var q = ri(11, 49), b = ri(2, 6); return Q(dec(q * b) + ' ÷ ' + b, dec(q), dec(q * 10)); }
+  function gDecDivDec() { var q = ri(2, 9), b = ri(2, 9); return Q(dec(q * b) + ' ÷ ' + dec(b), q); }
+
+  function gRound() {
+    return function () {
+      var n = ri(1000, 9999);
+      var t = ri(0, 2);
+      if (t === 0) return Q(n + ' 을 십의 자리에서 반올림', Math.round(n / 100) * 100);
+      if (t === 1) return Q(n + ' 을 백의 자리까지 올림', Math.ceil(n / 100) * 100);
+      return Q(n + ' 을 백의 자리까지 버림', Math.floor(n / 100) * 100);
+    };
+  }
+
+  function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+
+  function gGcdLcm() {
+    return function () {
+      var a = ri(4, 24), b = ri(4, 24);
+      var g = gcd(a, b);
+      if (ri(0, 1)) return Q(a + '과 ' + b + ' 의 최대공약수', g, Math.min(a, b));
+      return Q(a + '과 ' + b + ' 의 최소공배수', a * b / g, a * b);
+    };
+  }
+
+  function gReduce() {           // 약분
+    return function () {
+      var d = ri(2, 6), k = ri(2, 6), n = ri(1, d - 1);
+      return Q((n * k) + '/' + (d * k) + ' 를 약분하면 ?/' + d, n);
+    };
+  }
+
+  function gMixed() {            // 자연수의 혼합 계산
+    return function () {
+      var a = ri(2, 20), b = ri(2, 9), c = ri(2, 9);
+      if (ri(0, 1)) return Q(a + ' + ' + b + ' × ' + c, a + b * c, (a + b) * c);
+      return Q(a * b + ' ÷ ' + b + ' + ' + c, a + c);
+    };
+  }
+
+  function gRule() {             // 규칙과 대응
+    return function () {
+      var k = ri(2, 9), x = ri(2, 9);
+      return Q('□ = ○ × ' + k + ', ○ = ' + x, k * x);
+    };
+  }
+
+  function gRect() {             // 직사각형의 넓이와 둘레
+    return function () {
+      var a = ri(3, 14), b = ri(3, 14);
+      if (ri(0, 1)) return Q('가로 ' + a + ', 세로 ' + b + ' 넓이', a * b, 2 * (a + b));
+      return Q('가로 ' + a + ', 세로 ' + b + ' 둘레', 2 * (a + b), a * b);
+    };
+  }
+
+  function gTriArea() {
+    return function () {
+      var b = ri(2, 9) * 2, h = ri(3, 12);
+      return Q('밑변 ' + b + ', 높이 ' + h + ' 삼각형 넓이', b * h / 2, b * h);
+    };
+  }
+
+  function gBox() {              // 직육면체의 부피
+    return function () {
+      var a = ri(2, 9), b = ri(2, 9), c = ri(2, 6);
+      return Q(a + '×' + b + '×' + c + ' 직육면체 부피', a * b * c, a + b + c);
+    };
+  }
+
+  function gAverage() {
+    return function () {
+      var n = ri(3, 4), s = [], sum = 0, avg = ri(3, 15);
+      for (var i = 0; i < n - 1; i++) { var v = ri(1, avg * 2); s.push(v); sum += v; }
+      s.push(avg * n - sum);
+      if (s[n - 1] < 1) s[n - 1] = 1;
+      sum = s.reduce(function (p, c) { return p + c; }, 0);
+      return Q(s.join(', ') + ' 의 평균', Math.round(sum / n * 100) / 100);
+    };
+  }
+
+  function gPercent() {
+    return function () {
+      var whole = pick([20, 25, 40, 50, 200]), part = whole * pick([0.1, 0.2, 0.25, 0.5, 0.75]);
+      return Q(whole + ' 에 대한 ' + part + ' 의 비율(%)', Math.round(part / whole * 100));
+    };
+  }
+
+  function gRatio() {            // 비례식
+    return function () {
+      var a = ri(2, 9), b = ri(2, 9), k = ri(2, 5);
+      return Q(a + ':' + b + ' = ' + (a * k) + ':?', b * k);
+    };
+  }
+
+  function gCircle() {           // 원주율은 3.14
+    return function () {
+      var r = ri(2, 9);
+      var t = ri(0, 2);
+      if (t === 0) return Q('반지름 ' + r + ' 원의 지름', r * 2, r / 2);
+      if (t === 1) return Q('지름 ' + (r * 2) + ' 원의 둘레', (r * 2 * 3.14).toFixed(2), (r * 3.14).toFixed(2));
+      return Q('반지름 ' + r + ' 원의 넓이', (r * r * 3.14).toFixed(2), (r * 2 * 3.14).toFixed(2));
+    };
+  }
+
+  function gUnit(list) { return facts(list); }
+
+  function gAngleSum() {
+    return function () {
+      var a = ri(30, 80), b = ri(30, 80);
+      if (ri(0, 1)) return Q('삼각형: ' + a + '°, ' + b + '° → ?', 180 - a - b);
+      return Q('사각형: 90°, ' + a + '°, ' + b + '° → ?', 360 - 90 - a - b);
+    };
+  }
+
+  function gPolygon() {
+    return function () {
+      var n = ri(5, 10);
+      var t = ri(0, 2);
+      if (t === 0) return Q(n + '각형의 변의 수', n);
+      if (t === 1) return Q('정' + n + '각형 내각의 합', (n - 2) * 180);
+      return Q(n + '각형의 대각선 수', n * (n - 3) / 2);
+    };
+  }
+
+  function gInteger() {
+    return function () {
+      var t = ri(0, 2), a, b;
+      if (t === 0) { a = ri(-9, -1); b = ri(1, 14); return Q('(' + fmt(a) + ') + ' + b, a + b); }
+      if (t === 1) { a = ri(1, 12); b = ri(1, 18); return Q(a + ' − ' + b, a - b); }
+      a = ri(-7, -2); b = ri(2, 8); return Q('(' + fmt(a) + ') × ' + b, a * b);
+    };
+  }
+
+  function gLinear() {           // 문자와 식 · 일차방정식
+    return function () {
+      var a = ri(2, 6), b = ri(1, 9), x = ri(2, 9);
+      if (ri(0, 1)) return Q('x = ' + x + ' 일 때 ' + a + 'x + ' + b, a * x + b);
+      return Q(a + 'x + ' + b + ' = ' + (a * x + b) + ' 의 x', x);
+    };
+  }
+
+  function gGraph() {
+    return function () {
+      var a = ri(2, 5), b = ri(1, 6), x = ri(2, 7);
+      return Q('y = ' + a + 'x − ' + b + ', x = ' + x, a * x - b);
+    };
+  }
+
+  function gExponent() {
+    return function () {
+      var b = ri(2, 3), m = ri(2, 4), n = ri(1, 3);
+      if (ri(0, 1)) return Q(b + '^' + m + ' × ' + b + '^' + n, Math.pow(b, m + n), Math.pow(b, m * n));
+      return Q('a^' + (m + n) + ' ÷ a^' + n + ' 의 지수', m, m + n);
+    };
+  }
+
+  function gRepeating() {        // 순환소수
+    return function () {
+      var n = ri(1, 8);
+      return Q('0.' + n + n + n + '… = ?/9', n);
+    };
+  }
+
+  function gInequality() {
+    return function () {
+      var a = ri(2, 5), k = ri(3, 9);
+      return Q(a + 'x < ' + (a * k) + ' 인 자연수 x 의 개수', k - 1, k);
+    };
+  }
+
+  function gSystem() {
+    return function () {
+      var x = ri(2, 9), y = ri(1, x - 1);
+      return Q('x+y=' + (x + y) + ', x−y=' + (x - y) + ' 의 x', x, y);
+    };
+  }
+
+  function gSimilar() {
+    return function () {
+      var k = ri(2, 4), a = ri(2, 8);
+      return Q('닮음비 1:' + k + ', 대응변 ' + a + ' → ?', a * k, a + k);
+    };
+  }
+
+  var TRIPLES = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15], [7, 24, 25], [20, 21, 29]];
+
+  function gPythagoras() {
+    return function () {
+      var t = pick(TRIPLES);
+      if (ri(0, 1)) return Q('직각변 ' + t[0] + ', ' + t[1] + ' → 빗변', t[2], t[0] + t[1]);
+      return Q('빗변 ' + t[2] + ', 한 변 ' + t[0] + ' → ?', t[1], t[2] - t[0]);
+    };
+  }
+
+  function gSqrt() {
+    return function () {
+      var a = ri(2, 15);
+      if (ri(0, 1)) return Q('√' + (a * a), a);
+      var b = ri(2, 9);
+      return Q('√' + (a * a) + ' + √' + (b * b), a + b);
+    };
+  }
+
+  function gFactorize() {
+    return function () {
+      var a = ri(2, 9), b = ri(2, 9);
+      if (ri(0, 1)) return Q('(x+' + a + ')(x+' + b + ') 의 상수항', a * b, a + b);
+      return Q('x² − ' + (a * a) + ' = (x+' + a + ')(x−?)', a, a * a);
+    };
+  }
+
+  function gQuadratic() {
+    return function () {
+      var p = ri(2, 7), q = ri(1, p - 1);
+      if (ri(0, 1)) return Q('x² − ' + (p + q) + 'x + ' + (p * q) + ' = 0 의 큰 근', p, q);
+      return Q('두 근이 ' + p + ', ' + q + ' 인 식의 상수항', p * q, p + q);
+    };
+  }
+
+  function gParabola() {
+    return function () {
+      var a = ri(1, 3), x = ri(2, 7);
+      return Q('y = ' + a + 'x², x = ' + x, a * x * x, a * x * 2);
+    };
+  }
+
+  function gProbability() {
+    return facts([
+      ['주사위에서 짝수가 나올 확률(%)', 50],
+      ['동전 2개가 모두 앞면일 확률(%)', 25],
+      ['주사위에서 6이 나오는 경우의 수', 1],
+      ['동전 3개를 던지는 경우의 수', 8],
+      ['주사위 두 개를 던지는 경우의 수', 36],
+      ['1~10 중 소수(素數)의 개수', 4]
+    ])();
+  }
+
+  // ── 고정 문답 묶음 ───────────────────────────
+  var SHAPES = facts([
+    ['삼각형의 변의 수', 3], ['사각형의 변의 수', 4], ['오각형의 변의 수', 5],
+    ['삼각형의 꼭짓점 수', 3], ['사각형의 꼭짓점 수', 4], ['육각형의 변의 수', 6],
+    ['원의 꼭짓점 수', 0], ['정사각형의 같은 변의 수', 4]
+  ]);
+
+  var ANGLES = facts([
+    ['직각의 크기(°)', 90], ['삼각형 세 각의 합(°)', 180], ['직선이 이루는 각(°)', 180],
+    ['사각형 네 각의 합(°)', 360], ['정삼각형 한 각(°)', 60], ['한 바퀴의 각(°)', 360]
+  ]);
+
+  var LENGTH = facts([
+    ['1 km 는 몇 m', 1000], ['1 m 는 몇 cm', 100], ['1 cm 는 몇 mm', 10],
+    ['3 m 40 cm 는 몇 cm', 340], ['2 km 500 m 는 몇 m', 2500], ['150 cm 는 몇 m 몇 cm 의 m', 1]
+  ]);
+
+  var TIME = facts([
+    ['1시간은 몇 분', 60], ['1분은 몇 초', 60], ['1시간 20분은 몇 분', 80],
+    ['2분 30초는 몇 초', 150], ['하루는 몇 시간', 24], ['1주일은 며칠', 7]
+  ]);
+
+  var VOLUME = facts([
+    ['1 L 는 몇 mL', 1000], ['1 kg 은 몇 g', 1000], ['2 L 300 mL 는 몇 mL', 2300],
+    ['1 t 은 몇 kg', 1000], ['3 kg 200 g 은 몇 g', 3200]
+  ]);
+
+  var SOLIDS = facts([
+    ['직육면체의 면의 수', 6], ['직육면체의 모서리 수', 12], ['직육면체의 꼭짓점 수', 8],
+    ['정육면체의 면의 수', 6], ['삼각기둥의 면의 수', 5], ['사각기둥의 모서리 수', 12]
+  ]);
+
+  var PRISMS = facts([
+    ['삼각기둥의 모서리 수', 9], ['삼각기둥의 꼭짓점 수', 6], ['사각뿔의 면의 수', 5],
+    ['사각뿔의 꼭짓점 수', 5], ['오각기둥의 면의 수', 7], ['삼각뿔의 모서리 수', 6]
+  ]);
+
+  var ROUNDS = facts([
+    ['원기둥의 밑면의 수', 2], ['원뿔의 꼭짓점 수', 1], ['구의 면의 수', 1],
+    ['원기둥의 모서리 수', 0], ['원뿔의 밑면의 수', 1]
+  ]);
+
+  var STACK = facts([
+    ['2층으로 2×2 씩 쌓은 나무 수', 8], ['1층 3×3, 2층 1개일 때 나무 수', 10],
+    ['3×3×3 으로 쌓은 나무 수', 27], ['1층 4개, 2층 3개, 3층 1개', 8]
+  ]);
+
+  var SYMMETRY = facts([
+    ['합동인 도형의 대응각 60° → ?°', 60], ['선대칭 도형의 대응변 7 → ?', 7],
+    ['정사각형의 대칭축 수', 4], ['정삼각형의 대칭축 수', 3], ['원의 대칭축 수(무수히 많음은 0)', 0]
+  ]);
+
+  var BASIC_GEO = facts([
+    ['맞꼭지각 55° → 맞은편 각(°)', 55], ['평각(°)', 180], ['수직인 두 직선이 이루는 각(°)', 90],
+    ['평행선의 동위각 70° → 엇각(°)', 70], ['한 점에서 만나는 두 직선의 교점 수', 1]
+  ]);
+
+  var CIRCLE_PROP = facts([
+    ['중심각 80° → 원주각(°)', 40], ['원주각 35° → 중심각(°)', 70],
+    ['반원에 그린 원주각(°)', 90], ['중심각 120° → 원주각(°)', 60]
+  ]);
+
+  var TRIG = facts([
+    ['sin30° × 10', 5], ['cos60° × 8', 4], ['tan45° × 9', 9],
+    ['sin90° × 6', 6], ['cos0° × 7', 7], ['빗변 20, sin30° 인 변', 10]
+  ]);
+
+  var TRI_PROP = facts([
+    ['이등변삼각형 밑각 70° → 꼭지각(°)', 40], ['정삼각형 한 각(°)', 60],
+    ['평행사변형 한 각 110° → 이웃한 각(°)', 70], ['직사각형의 대각선이 같은 수', 2],
+    ['마름모의 네 변 중 같은 변의 수', 4]
+  ]);
+
+  var GRAPH_READ = facts([
+    ['막대가 4, 7, 5 일 때 합계', 16], ['막대가 12, 9 일 때 차', 3],
+    ['꺾은선이 8 → 14 일 때 늘어난 값', 6], ['자료 3, 3, 5, 9 의 합', 20],
+    ['가장 큰 값 15, 가장 작은 값 6 의 차', 9]
+  ]);
+
+  var SORT = facts([
+    ['빨강 4개, 파랑 7개 모두 몇 개', 11], ['사과 5개 중 2개를 먹으면', 3],
+    ['남학생 8명, 여학생 9명 모두', 17], ['3개씩 4묶음은 모두', 12]
+  ]);
+
+  var BIGNUM = facts([
+    ['10000 이 6개면', 60000], ['1억은 만이 몇 개', 10000],
+    ['1000 이 10개면', 10000], ['10만은 만이 몇 개', 10],
+    ['34만의 만의 자리 숫자', 4]
+  ]);
+
+  var MOVE = facts([
+    ['90°씩 3번 돌린 각(°)', 270], ['180° 돌리기를 2번 하면(°)', 360],
+    ['시계 방향 90° = 반시계 방향 몇 °', 270], ['밀기를 해도 변하지 않는 변의 수(사각형)', 4]
+  ]);
+
+  // ══ 배움 차례 ═════════════════════════════════
+  // 유치원은 학년·학기 없이 주제만, 초등·중등은 학년 → 학기 → 단원으로 들어간다.
+  var ELEM = {
+    '1-1': [['9까지의 수', gNumSense(1, 9)], ['여러 가지 모양', SHAPES], ['덧셈과 뺄셈', mix(gAdd(1, 5, 1, 4), gSub(3, 9))],
+            ['비교하기', gNumSense(1, 20)], ['50까지의 수', gBundle(50)]],
+    '1-2': [['100까지의 수', mix(gNumSense(50, 99), gBundle(100))], ['덧셈과 뺄셈 (1)', mix(gAdd(21, 79, 1, 9), gSub(20, 60))],
+            ['여러 가지 모양', SHAPES], ['덧셈과 뺄셈 (2)', gAdd(5, 9, 5, 9)],
+            ['시계 보기와 규칙 찾기', mix(TIME, gSeq())], ['덧셈과 뺄셈 (3)', gSum3()]],
+    '2-1': [['세 자리 수', gPlace(3)], ['여러 가지 도형', SHAPES], ['덧셈과 뺄셈', mix(gAdd(15, 89, 15, 89), gSub(30, 99))],
+            ['길이 재기', mix(LENGTH, gAdd(12, 60, 12, 60))], ['분류하기', SORT], ['곱셈', gMul(2, 9, 2, 9)]],
+    '2-2': [['네 자리 수', gPlace(4)], ['곱셈구구', gMul(2, 9, 2, 9)], ['길이 재기', LENGTH],
+            ['시각과 시간', TIME], ['표와 그래프', GRAPH_READ], ['규칙 찾기', gSeq()]],
+    '3-1': [['덧셈과 뺄셈', mix(gAdd(120, 899, 120, 899), gSub(200, 999))], ['평면도형', mix(SHAPES, ANGLES)],
+            ['나눗셈', gDiv(2, 9, 2, 9)], ['곱셈', gMul(11, 49, 2, 9)],
+            ['길이와 시간', mix(LENGTH, TIME)], ['분수와 소수', mix(gFracOfNum, gDecAdd)]],
+    '3-2': [['곱셈', gMul(11, 49, 11, 29)], ['나눗셈', gDiv(3, 19, 2, 9)], ['원', gCircle()],
+            ['분수', mix(gFracOfNum, gFracAdd)], ['들이와 무게', VOLUME], ['자료의 정리', GRAPH_READ]],
+    '4-1': [['큰 수', BIGNUM], ['각도', mix(ANGLES, gAngleSum())], ['곱셈과 나눗셈', mix(gMul(120, 899, 11, 29), gDiv(11, 49, 11, 29))],
+            ['평면도형의 이동', MOVE], ['막대그래프', GRAPH_READ], ['규칙 찾기', gSeq()]],
+    '4-2': [['분수의 덧셈과 뺄셈', mix(gFracAdd, gFracSub)], ['삼각형', mix(TRI_PROP, gAngleSum())],
+            ['소수의 덧셈과 뺄셈', mix(gDecAdd, gDecSub)], ['사각형', mix(TRI_PROP, ANGLES)],
+            ['꺾은선그래프', GRAPH_READ], ['다각형', gPolygon()]],
+    '5-1': [['자연수의 혼합 계산', gMixed()], ['약수와 배수', gGcdLcm()], ['규칙과 대응', gRule()],
+            ['약분과 통분', gReduce()], ['분수의 덧셈과 뺄셈', mix(gFracUnlike, gFracAdd)],
+            ['다각형의 둘레와 넓이', mix(gRect(), gTriArea())]],
+    '5-2': [['수의 범위와 어림하기', gRound()], ['분수의 곱셈', gFracOfNum], ['합동과 대칭', SYMMETRY],
+            ['소수의 곱셈', gDecMul], ['직육면체', SOLIDS], ['평균과 가능성', gAverage()]],
+    '6-1': [['분수의 나눗셈', gFracDivInt], ['각기둥과 각뿔', PRISMS], ['소수의 나눗셈', gDecDiv],
+            ['비와 비율', gPercent()], ['여러 가지 그래프', mix(gPercent(), GRAPH_READ)],
+            ['직육면체의 부피와 겉넓이', gBox()]],
+    '6-2': [['분수의 나눗셈', gFracDivFrac], ['소수의 나눗셈', gDecDivDec], ['공간과 입체', STACK],
+            ['비례식과 비례배분', gRatio()], ['원의 넓이', gCircle()], ['원기둥, 원뿔, 구', ROUNDS]]
+  };
+
+  var MID = {
+    '1-1': [['소인수분해', gGcdLcm()], ['정수와 유리수', gInteger()], ['문자와 식', gLinear()], ['좌표평면과 그래프', gGraph()]],
+    '1-2': [['기본 도형', BASIC_GEO], ['평면도형의 성질', gPolygon()], ['입체도형의 성질', mix(PRISMS, gBox())], ['통계', gAverage()]],
+    '2-1': [['유리수와 순환소수', gRepeating()], ['식의 계산', gExponent()], ['일차부등식', gInequality()],
+            ['연립일차방정식', gSystem()], ['일차함수와 그래프', gGraph()]],
+    '2-2': [['삼각형과 사각형의 성질', TRI_PROP], ['도형의 닮음', gSimilar()], ['피타고라스 정리', gPythagoras()], ['확률', gProbability]],
+    '3-1': [['제곱근과 실수', gSqrt()], ['다항식의 곱셈과 인수분해', gFactorize()], ['이차방정식', gQuadratic()], ['이차함수', gParabola()]],
+    '3-2': [['삼각비', TRIG], ['원의 성질', CIRCLE_PROP], ['통계', gAverage()]]
+  };
+
+  var SCHOOLS = [
+    {
+      key: 'kinder', label: '유치원', short: '유치원', speed: 72, gain: 1.0,
+      units: [['숫자', gNumSense(1, 10)], ['덧셈', gAdd(1, 5, 1, 4)], ['뺄셈', gSub(2, 9)]]
+    },
+    { key: 'elem', label: '초등학교', short: '초', grades: [1, 2, 3, 4, 5, 6], terms: [1, 2], table: ELEM, speed: 78, gain: 1.6, per: 3 },
+    { key: 'mid',  label: '중학교',   short: '중', grades: [1, 2, 3],          terms: [1, 2], table: MID,  speed: 96, gain: 2.2, per: 4 }
+  ];
+
+  function schoolOf(key) {
+    for (var i = 0; i < SCHOOLS.length; i++) if (SCHOOLS[i].key === key) return SCHOOLS[i];
+    return SCHOOLS[0];
+  }
+
+  function unitsOf(sel) {
+    var s = schoolOf(sel.school);
+    return s.units || s.table[sel.grade + '-' + sel.term];
+  }
+
+  function unitId(sel) {
+    return sel.school + '.' + (sel.grade || 0) + '.' + (sel.term || 0) + '.' + sel.unit;
+  }
+
+  function unitLabel(sel) {
+    var s = schoolOf(sel.school);
+    var name = unitsOf(sel)[sel.unit][0];
+    if (!s.grades) return s.label + ' · ' + name;
+    return s.short + sel.grade + '-' + sel.term + ' · ' + name;
+  }
+
+  function paceOf(sel) {
+    var s = schoolOf(sel.school);
+    var v = s.speed + (s.per || 0) * ((sel.grade || 1) - 1);
+    return { speed: v, gain: s.gain, max: v * 1.6 };
+  }
+
+  // ══ 옷장 ══════════════════════════════════════
+  // 아바타는 살구빛 얼굴에 옷만 갈아입는다. 옷마다 웃옷·바지 색과 덧입는 것(모자, 망토…)이 다르다.
+  var SKIN = '#f2c9a0', SKIN_DARK = '#d9a97e', HAIR = '#3a2c22', OUTLINE = 'rgba(20, 22, 28, 0.85)';
+
+  var CLOTHES = [
+    { id: 'tee',     name: '기본 티셔츠', shirt: '#4aa3ff', arm: '#3b86d6', pants: '#2f3a52' },
+    { id: 'hoodie',  name: '빨간 후드티', shirt: '#e8453c', arm: '#c33a32', pants: '#39404e', hood: true },
+    { id: 'rain',    name: '노란 우비',   shirt: '#ffc233', arm: '#e0a626', pants: '#4a5568', hood: true },
+    { id: 'space',   name: '우주복',      shirt: '#e6ecf5', arm: '#c9d3e0', pants: '#c9d3e0', helmet: true },
+    { id: 'knight',  name: '기사 갑옷',   shirt: '#9aa7b5', arm: '#7c8895', pants: '#6b7684', helmet: true },
+    { id: 'wizard',  name: '마법사 로브', shirt: '#7c5cff', arm: '#6a4de0', pants: '#3a2e6b', hat: true },
+    { id: 'ninja',   name: '닌자복',      shirt: '#2b2f3a', arm: '#22262f', pants: '#1b1e26', mask: true },
+    { id: 'dress',   name: '공주 드레스', shirt: '#ff7ab8', arm: '#eb6aa6', pants: '#ff9ec9', skirt: true, crown: true },
+    { id: 'rainbow', name: '무지개 망토', shirt: '#f7f7f2', arm: '#dcdcd4', pants: '#3a3f4b', cape: true }
+  ];
+
+  var RAINBOW = ['#e8453c', '#f08c2e', '#f7cf3f', '#5fbf5f', '#3f9ed6', '#4b56c9', '#8c5bc7'];
+
+  function clothOf(id) {
+    for (var i = 0; i < CLOTHES.length; i++) if (CLOTHES[i].id === id) return CLOTHES[i];
+    return CLOTHES[0];
+  }
+
+  var OWNED_KEY = 'numberpath.owned';
+  var WEAR_KEY = 'numberpath.wearing';
+  var TICKET_KEY = 'numberpath.tickets';
+
+  var owned, wearing, tickets;
+
+  function loadCloset() {
+    var raw = null;
+    try { raw = JSON.parse(localStorage.getItem(OWNED_KEY) || 'null'); } catch (e) { raw = null; }
+    owned = Array.isArray(raw) && raw.length ? raw : ['tee'];
+    if (owned.indexOf('tee') < 0) owned.push('tee');
+
+    wearing = localStorage.getItem(WEAR_KEY) || 'tee';
+    if (owned.indexOf(wearing) < 0) wearing = 'tee';
+
+    tickets = Number(localStorage.getItem(TICKET_KEY) || 0);
+  }
+
+  function saveCloset() {
+    try {
+      localStorage.setItem(OWNED_KEY, JSON.stringify(owned));
+      localStorage.setItem(WEAR_KEY, wearing);
+      localStorage.setItem(TICKET_KEY, String(tickets));
+    } catch (e) { /* 저장 불가 환경 무시 */ }
+  }
+
+  // ══ 화면 · 길의 치수 ══════════════════════════
+  var canvas = document.getElementById('board');
+  var ctx = canvas.getContext('2d');
+
+  var W = 360, H = 360;                 // 그림은 논리 좌표로, 백업 버퍼는 2배로 잡아 또렷하게
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+
+  var FONT = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+
+  var TILE = 20;                        // 블록 한 칸 (스터드 하나)
+  var ROAD_L = 30, ROAD_R = 330;        // 길 폭 300 = 15칸
+  var COLS = (ROAD_R - ROAD_L) / TILE;
+  var CENTER = (ROAD_L + ROAD_R) / 2;
+  var MEDIAN_W = 60;
+  var MEDIAN_L = CENTER - MEDIAN_W / 2;
+  var MEDIAN_R = CENTER + MEDIAN_W / 2;
+  var LANE_X = { '-1': (ROAD_L + MEDIAN_L) / 2, '1': (MEDIAN_R + ROAD_R) / 2 };
+
+  var PLAYER_Y = 286;                   // 화면 위 아바타의 자리
+  var SEE_AHEAD = PLAYER_Y;
+  var FORK_LEN = 150;                   // 갈림길이 갈라지는 지점 ~ 관문
+  var MEDIAN_TAIL = 54;                 // 관문을 지난 뒤에도 분리대가 이어지는 길이
+  var SEG = 430;                        // 관문 사이 간격 — 구멍과 무너지는 타일이 놓일 자리
+  var QUESTION_BACK = 44;               // 갈림길 앞, 길바닥에 세워지는 표지판 자리
+
+  var GATES_PER_STAGE = 4;
+  var STAGE_COUNT = 5;
+  var STAIRS_STEP = 13;                 // 무지개 계단 한 칸의 깊이
+  var CRUMBLE_EVERY = 3;                // 밟은 뒤 타일이 하나씩 사라지는 간격(초)
+  var JUMP_DUR = 0.75;
+  var JUMP_HIGH = 34;
+
+  // ── 블록 바닥 ────────────────────────────────
+  var PALETTE = ['#c9564c', '#d3853f', '#dcbb55', '#5da566', '#4a90c2', '#5b63ad', '#a96b98', '#ddd9cd', '#88919e'];
+
+  var plates = PALETTE.map(function (c) { return makePlate(c); });
+
+  function shade(hex, k) {
+    var n = parseInt(hex.slice(1), 16);
+    var r = Math.max(0, Math.min(255, Math.round(((n >> 16) & 255) * k)));
+    var g = Math.max(0, Math.min(255, Math.round(((n >> 8) & 255) * k)));
+    var b = Math.max(0, Math.min(255, Math.round((n & 255) * k)));
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  // 스터드가 박힌 타일 한 장을 미리 그려 두고 매 칸 찍어 낸다 — 매 프레임 원을 다시 그리지 않게
+  function makePlate(color) {
+    var c = document.createElement('canvas');
+    c.width = TILE * 2; c.height = TILE * 2;
+    var g = c.getContext('2d');
+    g.setTransform(2, 0, 0, 2, 0, 0);
+
+    g.fillStyle = color;
+    g.fillRect(0, 0, TILE, TILE);
+
+    g.strokeStyle = shade(color, 0.78);
+    g.lineWidth = 1;
+    g.strokeRect(0.5, 0.5, TILE - 1, TILE - 1);
+
+    g.fillStyle = shade(color, 0.82);
+    g.beginPath();
+    g.arc(TILE / 2, TILE / 2 + 1.2, 6, 0, Math.PI * 2);
+    g.fill();
+
+    g.fillStyle = shade(color, 1.12);
+    g.beginPath();
+    g.arc(TILE / 2, TILE / 2, 6, 0, Math.PI * 2);
+    g.fill();
+
+    g.strokeStyle = shade(color, 0.9);
+    g.lineWidth = 1;
+    g.beginPath();
+    g.arc(TILE / 2, TILE / 2, 6, 0, Math.PI * 2);
+    g.stroke();
+
+    return c;
+  }
+
+  // 자리마다 늘 같은 색이 나오도록 좌표를 섞어 팔레트를 고른다.
+  // 한 칸씩 색이 튀면 눈이 어지러워, 2×2 덩어리로 묶어 색을 나눈다.
+  function plateAt(col, row) {
+    var h = ((col >> 1) * 374761393 + (row >> 1) * 668265263) >>> 0;
+    h = (h ^ (h >>> 13)) * 1274126177 >>> 0;
+    return plates[(h >>> 4) % plates.length];
+  }
+
+  // ══ 판의 상태 ═════════════════════════════════
+  var scoreEl = { stage: document.getElementById('stage-no'), gate: document.getElementById('gate-no') };
   var bestEl = document.getElementById('best');
-  var rangeEl = document.getElementById('range');
-  var entryEl = document.getElementById('entry');
-  var entryDigitsEl = document.getElementById('entry-digits');
-  var caretEl = document.getElementById('caret');
-  var verdictEl = document.getElementById('verdict');
-  var warmthEl = document.getElementById('warmth');
-  var historyEl = document.getElementById('history');
+  var quizEl = document.getElementById('quiz');
+  var whereEl = document.getElementById('where');
   var overlay = document.getElementById('overlay');
   var overlayTitle = document.getElementById('overlay-title');
   var overlayDesc = document.getElementById('overlay-desc');
-  var levelsEl = document.getElementById('levels');
-  var startBtn = document.getElementById('start-btn');
-  var keypad = document.getElementById('keypad');
+  var choicesEl = document.getElementById('choices');
+  var actionsEl = document.getElementById('actions');
+  var shopBtn = document.getElementById('shop-btn');
+  var shopBadge = document.getElementById('shop-badge');
+  var pads = document.querySelector('.pads');
 
-  // 기회는 이분 탐색에 필요한 횟수(각각 6 / 7 / 9회)보다 넉넉하게 준다.
-  // 근접 힌트는 쉬움에서만 켜서, 난이도 차이가 범위뿐 아니라 정보량에서도 나게 한다.
-  var LEVELS = {
-    easy:   { min: 1, max: 50,  tries: 10, warmth: true,  points: 10 },
-    normal: { min: 1, max: 100, tries: 8,  warmth: false, points: 25 },
-    hard:   { min: 1, max: 500, tries: 10, warmth: false, points: 40 }
-  };
+  var BEST_KEY = 'numberpath.best';
+  var SEL_KEY = 'numberpath.unit';
 
-  var BEST_KEY = 'number.best';
-  var LEVEL_KEY = 'number.level';
+  var sel = null, gen = null, pace = null, best = 0;
+  var state = 'menu';                   // menu | ready | playing | paused | over | cleared | shop
+  var stageNo, dist, speed, gates, holes, cracks, stairsY, passed;
+  var lane, playerX, locked, lockedLane, jump, flash, lastTime;
 
-  var levelName, level;
-  var secret, entry, triesLeft, guesses, score, best, state;   // state: ready | playing | over
-  var noticeShown;   // 기회를 쓰지 않은 안내(범위 밖 · 중복)를 띄워 둔 상태인지
-
-  function readBest() {
-    // 난이도마다 점수 체계가 다르므로 최고 점수도 따로 기록한다
-    return Number(localStorage.getItem(BEST_KEY + '.' + levelName) || 0);
+  // ── 관문 만들기 ──────────────────────────────
+  function autoDecoy(ans) {
+    var mag = Math.abs(ans);
+    var deltas = mag >= 1000 ? [1, 10, 100, 1000] : mag >= 100 ? [1, 2, 10, 100] : mag >= 20 ? [1, 2, 5, 10] : [1, 2, 3];
+    var out = [];
+    deltas.forEach(function (d) { out.push(ans + d, ans - d); });
+    out = out.filter(function (n) { return n !== ans && (ans < 0 || n >= 0); });
+    return out.length ? pick(out) : ans + 1;
   }
 
-  function setLevel(name) {
-    levelName = LEVELS[name] ? name : 'easy';
-    level = LEVELS[levelName];
-    try { localStorage.setItem(LEVEL_KEY, levelName); } catch (e) { /* 저장 불가 환경 무시 */ }
-
-    Array.prototype.forEach.call(document.querySelectorAll('.level'), function (btn) {
-      var on = btn.dataset.level === levelName;
-      btn.classList.toggle('is-on', on);
-      btn.setAttribute('aria-pressed', String(on));
-    });
-
-    best = readBest();
-    bestEl.textContent = best;
+  function makeGate(y) {
+    var q = gen();
+    var answer = fmt(q.answer);
+    var decoy = q.decoy != null ? fmt(q.decoy) : fmt(autoDecoy(Number(q.answer)));
+    if (decoy === answer) {
+      var n = Number(q.answer);
+      if (isFinite(n)) {
+        decoy = fmt(autoDecoy(n));
+      } else {
+        var frac = /^(-?\d+)\/(\d+)$/.exec(answer);   // 분수라면 분자를 하나 밀어 둔다
+        decoy = frac ? (Number(frac[1]) + 1) + '/' + frac[2] : answer + '?';
+      }
+    }
+    var side = ri(0, 1) ? 1 : -1;
+    return {
+      y: y, text: q.text, answer: answer, side: side,
+      left: side === -1 ? answer : decoy,
+      right: side === 1 ? answer : decoy,
+      done: false
+    };
   }
 
-  function reset() {
-    var span = level.max - level.min + 1;
-    secret = level.min + Math.floor(Math.random() * span);
-    entry = '';
-    triesLeft = level.tries;
-    guesses = [];
-    score = 0;
-    state = 'ready';
-    noticeShown = false;
+  // 스테이지 하나 = 문제 네 개 + 그 사이의 구멍과 무너지는 타일 + 끝의 무지개 계단
+  function buildStage() {
+    dist = 0;
+    gates = [];
+    holes = [];
+    cracks = [];
+    passed = 0;
+    lane = -1;
+    playerX = LANE_X['-1'];
+    locked = false;
+    lockedLane = -1;
+    jump = null;
+    flash = null;
 
-    scoreEl.textContent = score;
-    verdictEl.textContent = '';
-    warmthEl.textContent = '';
-    historyEl.textContent = '';
+    var y = 340;
+    for (var i = 0; i < GATES_PER_STAGE; i++) {
+      if (i) y += SEG;
+      gates.push(makeGate(y));
+    }
+
+    // 아바타가 뛰어 건널 수 있는 만큼만 벌린다 — 한 번 뛰면 speed × 0.75 를 가니 그 3분의 1쯤
+    var gapW = Math.max(24, Math.min(60, speed * 0.26));
+
+    for (i = 0; i < GATES_PER_STAGE; i++) {
+      var from = i === 0 ? 90 : gates[i - 1].y + MEDIAN_TAIL + 46;
+      var to = gates[i].y - FORK_LEN - 40;
+      if (to - from < 150) continue;
+      if (i === 0 && stageNo === 1) continue;          // 첫 스테이지 첫 구간은 몸을 풀라고 비워 둔다
+
+      if (Math.random() < 0.42 + stageNo * 0.1) {
+        var s = ri(Math.round(from), Math.round(to - gapW));
+        holes.push({ y0: s, y1: s + gapW });
+        from = s + gapW + 40;
+      }
+
+      // 밟으면 하나씩 사라지는 금 간 타일 — 3초에 한 칸씩이라 지나가고 나서 무너진다
+      if (to - from > 90 && Math.random() < 0.3 + stageNo * 0.1) {
+        var n = ri(3, 5);
+        var top = ri(Math.round(from), Math.round(to - n * TILE));
+        cracks.push({ y0: top, n: n, t: null });
+      }
+    }
+
+    stairsY = gates[GATES_PER_STAGE - 1].y + 250;
     draw();
+    updateHud();
   }
 
-  function draw() {
-    rangeEl.textContent = level.min + ' – ' + level.max + ' · 남은 기회 ' + triesLeft;
-
-    var empty = entry === '';
-    entryDigitsEl.textContent = empty ? '‒‒' : entry;
-    entryEl.classList.toggle('is-empty', empty);
-    // 게임이 끝났으면 더 받을 입력이 없으므로 커서를 숨긴다
-    caretEl.hidden = state !== 'playing';
+  function currentGate() {
+    for (var i = 0; i < gates.length; i++) if (!gates[i].done) return gates[i];
+    return null;
   }
 
-  function renderHistory() {
-    historyEl.textContent = '';
-    guesses.forEach(function (g) {
-      var chip = document.createElement('span');
-      chip.className = 'past' + (g.mark === '✔' ? ' hit' : '');
-      chip.textContent = g.mark + ' ' + g.value;
-      historyEl.appendChild(chip);
-    });
+  // 무너져 내린 칸도 구멍으로 친다
+  function fallen(crack, i) { return crack.t !== null && crack.t >= CRUMBLE_EVERY * (i + 1); }
+
+  function overHole(y) {
+    for (var i = 0; i < holes.length; i++) if (y > holes[i].y0 + 2 && y < holes[i].y1 - 2) return true;
+    for (i = 0; i < cracks.length; i++) {
+      var c = cracks[i];
+      for (var k = 0; k < c.n; k++) {
+        if (!fallen(c, k)) continue;
+        var y0 = c.y0 + k * TILE;
+        if (y > y0 + 2 && y < y0 + TILE - 2) return true;
+      }
+    }
+    return false;
   }
 
-  function warmthOf(guess) {
-    if (!level.warmth) return '';
-    var span = level.max - level.min;
-    var ratio = Math.abs(guess - secret) / span;
-    if (ratio <= 0.02) return '앗 아주 뜨거워요';
-    if (ratio <= 0.06) return '뜨거워요';
-    if (ratio <= 0.15) return '따뜻해요';
-    if (ratio <= 0.35) return '미지근해요';
-    return '차가워요';
+  // ══ 판 고르기 · 준비 ══════════════════════════
+  function readBest() { return Number(localStorage.getItem(BEST_KEY + '.' + unitId(sel)) || 0); }
+
+  function updateHud() {
+    scoreEl.stage.textContent = stageNo + '/' + STAGE_COUNT;
+    scoreEl.gate.textContent = passed + '/' + GATES_PER_STAGE;
+    bestEl.textContent = best;
+    shopBadge.hidden = tickets <= 0;
+    shopBadge.textContent = tickets;
   }
 
-  function showOverlay(title, desc, withLevels, startLabel) {
+  function chooseUnit(next) {
+    sel = next;
+    gen = unitsOf(sel)[sel.unit][1];
+    pace = paceOf(sel);
+    best = readBest();
+    whereEl.textContent = unitLabel(sel);
+    try { localStorage.setItem(SEL_KEY, JSON.stringify(sel)); } catch (e) { /* 저장 불가 환경 무시 */ }
+    stageNo = 1;
+    speed = pace.speed;
+    readyScreen();
+  }
+
+  // ── 화면 위 메시지 ───────────────────────────
+  function button(cls, label, onClick) {
+    var b = document.createElement('button');
+    b.className = cls;
+    b.textContent = label;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function showMessage(title, desc, tone, actions) {
     overlayTitle.textContent = title;
-    overlayDesc.innerHTML = desc;
-    levelsEl.hidden = !withLevels;
-    startBtn.textContent = startLabel;
+    overlayTitle.className = 'title' + (tone ? ' is-' + tone : '');
+    overlayDesc.innerHTML = desc || '';
+    overlayDesc.hidden = !desc;
+    choicesEl.hidden = true;
+    choicesEl.className = 'choices';
+    choicesEl.textContent = '';
+    actionsEl.hidden = false;
+    actionsEl.textContent = '';
+    actions.forEach(function (a) { actionsEl.appendChild(button(a[0], a[1], a[2])); });
     overlay.hidden = false;
   }
 
   function readyScreen() {
-    reset();
-    showOverlay(
-      'Ready',
-      '<b>' + level.min + ' – ' + level.max + '</b> 사이의 숫자를 숨겼습니다.<br>' +
-      '<b>' + level.tries + '</b>번 안에 맞혀 보세요.',
-      true,
-      'Start'
+    state = 'ready';
+    buildStage();
+    quizEl.textContent = currentGate().text;
+    showMessage(
+      unitLabel(sel) + ' · 스테이지 ' + stageNo,
+      '갈림길에서 <b>정답이 적힌 길</b>로 들어가세요.<br>' +
+      '길이 끊긴 곳은 <b>↑</b> 로 뛰어넘고,<br>금 간 타일은 밟으면 무너집니다.',
+      null,
+      [['go', 'Start', start], ['sub', '단원 바꾸기', openMenu]]
     );
   }
 
   function start() {
-    reset();
     state = 'playing';
     overlay.hidden = true;
-    draw();
+    lastTime = 0;
+    requestAnimationFrame(loop);
   }
 
-  function finish(won) {
-    state = 'over';
+  function pauseScreen() {
+    state = 'paused';
+    showMessage('일시정지', '<b>P</b> 를 눌러 이어서 갑니다.', null,
+      [['go', 'Resume', togglePause], ['sub', '단원 바꾸기', openMenu]]);
+  }
 
-    if (won) {
-      // 남은 기회가 많을수록 높은 점수. 마지막 기회에 맞혀도 한 몫은 챙긴다
-      score = (triesLeft + 1) * level.points;
-      scoreEl.textContent = score;
-      if (score > best) {
-        best = score;
-        bestEl.textContent = best;
-        try { localStorage.setItem(BEST_KEY + '.' + levelName, String(best)); } catch (e) { /* 저장 불가 환경 무시 */ }
+  function togglePause() {
+    if (state === 'playing') {
+      pauseScreen();
+    } else if (state === 'paused') {
+      state = 'playing';
+      overlay.hidden = true;
+      lastTime = 0;
+      requestAnimationFrame(loop);
+    }
+  }
+
+  function retryStage() {
+    buildStage();
+    quizEl.textContent = currentGate().text;
+    start();
+  }
+
+  function fail(title, desc) {
+    state = 'over';
+    flash = { t: 0.5, bad: true };
+    draw();
+    showMessage(title, desc + '<br>스테이지 <b>' + stageNo + '</b> 을 처음부터 다시 갑니다.', 'bad',
+      [['go', 'Retry', retryStage], ['sub', '단원 바꾸기', openMenu]]);
+  }
+
+  function clearStage() {
+    var doneAll = stageNo >= STAGE_COUNT;
+
+    if (stageNo > best) {
+      best = stageNo;
+      try { localStorage.setItem(BEST_KEY + '.' + unitId(sel), String(best)); } catch (e) { /* 저장 불가 환경 무시 */ }
+    }
+
+    if (doneAll) {
+      state = 'cleared';
+      tickets += 1;                     // 스테이지를 모두 끝냈으니 상점에서 옷 한 벌을 고를 수 있다
+      saveCloset();
+      updateHud();
+      showMessage(
+        '단원 완주!',
+        unitLabel(sel) + ' 의 스테이지 ' + STAGE_COUNT + '개를 모두 끝냈습니다.<br>' +
+        '<b>상점에서 옷 한 벌</b>을 고를 수 있어요.',
+        'good',
+        [['go', '상점 열기', openShop], ['sub', '처음부터', function () { stageNo = 1; speed = pace.speed; readyScreen(); }],
+         ['sub', '단원 바꾸기', openMenu]]
+      );
+      return;
+    }
+
+    state = 'cleared';
+    stageNo += 1;
+    speed = Math.min(pace.max, speed + pace.gain * 4);
+    updateHud();
+    showMessage('스테이지 ' + (stageNo - 1) + ' 클리어', '무지개 계단을 올라 <b>스테이지 ' + stageNo + '</b> 로 갑니다.', 'good',
+      [['go', 'Next', function () { buildStage(); quizEl.textContent = currentGate().text; start(); }],
+       ['sub', '단원 바꾸기', openMenu]]);
+  }
+
+  // ── 단원 고르기 ──────────────────────────────
+  var menuStep = 'school', menuSel = {};
+
+  function openMenu() {
+    state = 'menu';
+    menuStep = 'school';
+    menuSel = {};
+    drawMenu();
+  }
+
+  function drawMenu() {
+    var items = [], title = '', back = null;
+
+    if (menuStep === 'school') {
+      title = '어디까지 배웠나요?';
+      items = SCHOOLS.map(function (s) {
+        return [null, s.label, function () {
+          menuSel = { school: s.key };
+          menuStep = s.units ? 'unit' : 'grade';
+          drawMenu();
+        }];
+      });
+    } else if (menuStep === 'grade') {
+      var s1 = schoolOf(menuSel.school);
+      title = s1.label;
+      back = function () { menuStep = 'school'; drawMenu(); };
+      items = s1.grades.map(function (g) {
+        return [null, g + '학년', function () { menuSel.grade = g; menuStep = 'term'; drawMenu(); }];
+      });
+    } else if (menuStep === 'term') {
+      var s2 = schoolOf(menuSel.school);
+      title = s2.label + ' ' + menuSel.grade + '학년';
+      back = function () { menuStep = 'grade'; drawMenu(); };
+      items = s2.terms.map(function (t) {
+        return [null, t + '학기', function () { menuSel.term = t; menuStep = 'unit'; drawMenu(); }];
+      });
+    } else {
+      var s3 = schoolOf(menuSel.school);
+      title = s3.units ? s3.label : s3.label + ' ' + menuSel.grade + '학년 ' + menuSel.term + '학기';
+      back = function () { menuStep = s3.units ? 'school' : 'term'; drawMenu(); };
+      items = unitsOf(menuSel).map(function (u, i) {
+        return [i + 1, u[0], function () {
+          chooseUnit({ school: menuSel.school, grade: menuSel.grade, term: menuSel.term, unit: i });
+        }];
+      });
+    }
+
+    overlayTitle.textContent = title;
+    overlayTitle.className = 'title';
+    overlayDesc.hidden = true;
+    choicesEl.className = 'choices';
+    choicesEl.hidden = false;
+    choicesEl.textContent = '';
+
+    items.forEach(function (it) {
+      var b = document.createElement('button');
+      if (it[0] != null) {
+        var no = document.createElement('span');
+        no.className = 'no';
+        no.textContent = it[0];
+        b.appendChild(no);
+      }
+      b.appendChild(document.createTextNode(it[1]));
+      b.addEventListener('click', it[2]);
+      choicesEl.appendChild(b);
+    });
+
+    actionsEl.textContent = '';
+    if (back) actionsEl.appendChild(button('sub', '← 뒤로', back));
+    if (sel) actionsEl.appendChild(button('sub', '취소', readyScreen));
+    actionsEl.hidden = !actionsEl.childNodes.length;
+    overlay.hidden = false;
+  }
+
+  // ── 상점 ─────────────────────────────────────
+  var backFromShop = null;
+
+  function openShop() {
+    if (state !== 'shop') backFromShop = state;
+    state = 'shop';
+
+    overlayTitle.textContent = '상점';
+    overlayTitle.className = 'title';
+    overlayDesc.innerHTML = tickets > 0
+      ? '고를 수 있는 옷 <b>' + tickets + '</b>벌.<br>가진 옷은 눌러서 갈아입습니다.'
+      : '스테이지 <b>' + STAGE_COUNT + '개</b>를 모두 끝내면<br>옷을 한 벌 고를 수 있어요.';
+    overlayDesc.hidden = false;
+    choicesEl.className = 'choices wardrobe';
+    choicesEl.hidden = false;
+    choicesEl.textContent = '';
+
+    CLOTHES.forEach(function (c) {
+      var have = owned.indexOf(c.id) >= 0;
+      var b = document.createElement('button');
+      b.className = have ? (wearing === c.id ? 'is-worn' : '') : 'is-locked';
+
+      var pv = document.createElement('canvas');
+      pv.width = 68; pv.height = 84;
+      var g = pv.getContext('2d');
+      g.setTransform(2, 0, 0, 2, 0, 0);
+      drawAvatar(g, 17, 38, 1.05, c, 0);
+      b.appendChild(pv);
+
+      b.appendChild(document.createTextNode(have ? (wearing === c.id ? '입는 중' : c.name) : c.name));
+      b.title = c.name;
+
+      b.addEventListener('click', function () {
+        if (have) { wearing = c.id; }
+        else if (tickets > 0) { tickets -= 1; owned.push(c.id); wearing = c.id; }
+        else return;
+        saveCloset();
+        updateHud();
+        openShop();
+      });
+
+      choicesEl.appendChild(b);
+    });
+
+    actionsEl.textContent = '';
+    actionsEl.appendChild(button('go', '닫기', function () {
+      var back = backFromShop;
+      backFromShop = null;
+      if (!sel || back === 'menu') { openMenu(); return; }
+      // 판을 보다 들른 것이면 그 자리로 돌려보낸다 — 상점에 다녀왔다고 판을 처음부터 다시 하게 두지 않는다
+      if (back === 'paused' || back === 'playing') { pauseScreen(); return; }
+      if (back === 'cleared') { stageNo = 1; speed = pace.speed; }
+      readyScreen();
+    }));
+    actionsEl.hidden = false;
+    overlay.hidden = false;
+  }
+
+  // ══ 한 걸음 ═══════════════════════════════════
+  function update(dt) {
+    dist += speed * dt;
+
+    if (jump) {
+      jump.t += dt;
+      if (jump.t >= JUMP_DUR) jump = null;
+    }
+
+    // 금 간 타일은 밟는 순간부터 시간을 재고, 3초에 한 칸씩 무너진다
+    cracks.forEach(function (c) {
+      if (c.t === null) {
+        if (dist >= c.y0 && dist <= c.y0 + c.n * TILE) c.t = 0;
+      } else if (c.t < CRUMBLE_EVERY * c.n + 1) {
+        c.t += dt;
+      }
+    });
+
+    if (!jump && overHole(dist)) {
+      fail('길이 끊겼습니다', '끊긴 자리에서는 <b>↑</b> 로 뛰어야 합니다.');
+      return;
+    }
+
+    var gate = currentGate();
+    if (gate) {
+      // 갈림길에 들어서는 순간 길이 정해진다. 그 뒤로는 분리대에 막혀 바꿀 수 없다
+      if (!locked && dist >= gate.y - FORK_LEN) {
+        locked = true;
+        lockedLane = lane;
+      }
+
+      if (dist >= gate.y) {
+        gate.done = true;
+        if (lockedLane === gate.side) {
+          passed += 1;
+          speed = Math.min(pace.max, speed + pace.gain);
+          flash = { t: 0.3, bad: false };
+          updateHud();
+        } else {
+          fail('틀렸습니다', '<b>' + gate.text + '</b> 의 답은 <b>' + gate.answer + '</b>.');
+          return;
+        }
       }
     }
 
-    draw();
+    var last = null;
+    for (var i = 0; i < gates.length; i++) if (gates[i].done) last = gates[i];
+    if (locked && (!last || dist >= last.y + MEDIAN_TAIL)) locked = false;
+    if (locked) lane = lockedLane;
 
-    var used = level.tries - triesLeft;
-    showOverlay(
-      won ? 'Clear' : 'Game Over',
-      won
-        ? '숨은 수는 <b>' + secret + '</b>.<br><b>' + used + '</b>번 만에 맞혔습니다 · <b>' + score + '</b>점'
-        : '숨은 수는 <b>' + secret + '</b> 였습니다.',
-      true,
-      'Retry'
-    );
+    playerX += (LANE_X[lane] - playerX) * Math.min(1, dt * 9);
+
+    if (flash) { flash.t -= dt; if (flash.t <= 0) flash = null; }
+
+    // 네 문제를 다 지나면 남은 길은 계단뿐이니, 지나간 문제를 계속 띄워 두지 않는다
+    var next = currentGate();
+    var ask = next ? next.text : '무지개 계단으로 →';
+    if (quizEl.textContent !== ask) quizEl.textContent = ask;
+
+    if (dist >= stairsY + STAIRS_STEP * RAINBOW.length + 26) { clearStage(); return; }
   }
 
-  // 기회를 쓰지 않은 안내. 다음 숫자를 누르기 시작하면 지운다
-  function notice(title, detail) {
-    verdictEl.textContent = title;
-    warmthEl.textContent = detail;
-    noticeShown = true;
-    draw();
+  // ══ 그리기 ════════════════════════════════════
+  function sy(worldY) { return PLAYER_Y - (worldY - dist); }
+
+  function roundRect(g, x, y, w, h, r) {
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
   }
 
-  function submit() {
-    if (state !== 'playing' || entry === '') return;
-
-    var guess = Number(entry);
-    entry = '';
-
-    if (guess < level.min || guess > level.max) {
-      notice('범위 밖', level.min + ' 에서 ' + level.max + ' 사이로 넣어 주세요');
-      return;   // 잘못 누른 값으로 기회를 잃지는 않는다
-    }
-
-    var already = guesses.some(function (g) { return g.value === guess; });
-    if (already) {
-      notice('이미 넣은 수', '다른 수로 해 보세요');
-      return;
-    }
-
-    noticeShown = false;
-    triesLeft -= 1;
-
-    if (guess === secret) {
-      guesses.push({ value: guess, mark: '✔' });
-      renderHistory();
-      verdictEl.textContent = '정답!';
-      warmthEl.textContent = '';
-      finish(true);
-      return;
-    }
-
-    var low = guess < secret;
-    guesses.push({ value: guess, mark: low ? '▲' : '▼' });
-    renderHistory();
-    verdictEl.textContent = low ? '▲ 더 큰 수' : '▼ 더 작은 수';
-    warmthEl.textContent = warmthOf(guess);
-
-    if (triesLeft === 0) { finish(false); return; }
-    draw();
+  // 단원마다 문제의 길이가 제각각이라, 표지판 폭에 맞을 때까지 글자를 줄인다
+  function fitFont(g, text, maxWidth, start, min) {
+    var size = start;
+    do {
+      g.font = 'bold ' + size + 'px ' + FONT;
+      if (g.measureText(text).width <= maxWidth) break;
+      size -= 1;
+    } while (size > min);
+    return size;
   }
 
-  function typeDigit(d) {
+  function drawFloor() {
+    ctx.fillStyle = '#0b0c10';
+    ctx.fillRect(0, 0, W, H);
+
+    var r0 = Math.floor((dist - (H - PLAYER_Y)) / TILE) - 1;
+    var r1 = Math.floor((dist + SEE_AHEAD) / TILE) + 1;
+
+    for (var r = r0; r <= r1; r++) {
+      var top = sy((r + 1) * TILE);
+      if (top > H || top + TILE < 0) continue;
+      for (var c = 0; c < COLS; c++) {
+        ctx.drawImage(plateAt(c, r), ROAD_L + c * TILE, top, TILE, TILE);
+      }
+    }
+  }
+
+  function drawHole(y0, y1, mark) {
+    var top = sy(y1), bottom = sy(y0);
+    if (bottom < -10 || top > H + 10) return;
+
+    var x = ROAD_L, w = ROAD_R - ROAD_L;
+
+    ctx.fillStyle = '#05060a';
+    ctx.fillRect(x, top, w, bottom - top);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(x, top, w, 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(x, bottom - 3, w, 3);
+
+    // 뛰라는 표시 — 구멍 앞쪽 바닥에 새겨 둔다
+    if (mark && bottom < H + 40) {
+      ctx.strokeStyle = '#ffd48a';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      for (var i = 0; i < 2; i++) {
+        var cy = bottom + 12 + i * 9;
+        ctx.beginPath();
+        ctx.moveTo(CENTER - 11, cy + 5);
+        ctx.lineTo(CENTER, cy);
+        ctx.lineTo(CENTER + 11, cy + 5);
+        ctx.stroke();
+      }
+      ctx.lineCap = 'butt';
+    }
+  }
+
+  function drawCracks() {
+    cracks.forEach(function (c) {
+      for (var k = 0; k < c.n; k++) {
+        var y0 = c.y0 + k * TILE;
+        if (fallen(c, k)) { drawHole(y0, y0 + TILE, false); continue; }
+
+        var top = sy(y0 + TILE);
+        if (top > H || top + TILE < 0) continue;
+
+        // 곧 무너질 칸은 잘게 떨린다
+        var due = c.t !== null ? CRUMBLE_EVERY * (k + 1) - c.t : 99;
+        var jx = due < 0.7 ? (Math.random() - 0.5) * 2 : 0;
+
+        ctx.save();
+        ctx.globalAlpha = due < 0.7 ? 0.72 : 1;
+
+        // 같은 블록이되 빛이 바래고 금이 간 것으로 — 밟으면 안 된다는 것이 한눈에 보이게
+        ctx.fillStyle = '#b3ada0';
+        ctx.fillRect(ROAD_L + jx, top, ROAD_R - ROAD_L, TILE);
+
+        ctx.fillStyle = '#c2bcb0';
+        for (var i = 0; i < COLS; i++) {
+          ctx.beginPath();
+          ctx.arc(ROAD_L + i * TILE + TILE / 2 + jx, top + TILE / 2, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.strokeStyle = '#6e6659';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (i = 0; i < COLS; i++) {
+          var x = ROAD_L + i * TILE + jx;
+          ctx.moveTo(x, top + TILE * 0.2);
+          ctx.lineTo(x + TILE * 0.42, top + TILE * 0.55);
+          ctx.lineTo(x + TILE * 0.3, top + TILE);
+          ctx.moveTo(x + TILE * 0.42, top + TILE * 0.55);
+          ctx.lineTo(x + TILE, top + TILE * 0.35);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+    });
+  }
+
+  function drawStairs() {
+    var base = stairsY;
+    for (var i = 0; i < RAINBOW.length; i++) {
+      var y0 = base + i * STAIRS_STEP;
+      var top = sy(y0 + STAIRS_STEP);
+      if (top > H || top + STAIRS_STEP < 0) continue;
+
+      ctx.fillStyle = RAINBOW[i];
+      ctx.fillRect(ROAD_L, top, ROAD_R - ROAD_L, STAIRS_STEP);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.fillRect(ROAD_L, top, ROAD_R - ROAD_L, 3);
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillRect(ROAD_L, top + STAIRS_STEP - 2, ROAD_R - ROAD_L, 2);
+    }
+  }
+
+  function drawBrickWall(x, top, w, h) {
+    if (h <= 0) return;
+    ctx.fillStyle = '#5d6472';
+    ctx.fillRect(x, top, w, h);
+    ctx.fillStyle = '#767e8e';
+    ctx.fillRect(x, top, w, Math.min(4, h));
+    ctx.strokeStyle = '#3d4350';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, top + 1, w - 2, h - 2);
+
+    ctx.fillStyle = '#6b7382';
+    for (var y = top + 8; y < top + h - 6; y += 18) {
+      for (var i = 0; i < 2; i++) {
+        ctx.beginPath();
+        ctx.arc(x + w * (i ? 0.72 : 0.28), y, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawGate(gate) {
+    var forkStart = gate.y - FORK_LEN;
+    var top = sy(gate.y + MEDIAN_TAIL);
+    var bottom = sy(forkStart);
+    if (bottom < 0 || top > H) return;
+
+    drawBrickWall(MEDIAN_L, top, MEDIAN_W, bottom - top);
+
+    // 각 길에 놓인 답 블록
+    var ay = sy(gate.y - 60);
+    if (ay > -40 && ay < H + 40) {
+      [-1, 1].forEach(function (side) {
+        var value = side === -1 ? gate.left : gate.right;
+        var cx = LANE_X[side];
+        var right = gate.done && side === gate.side;
+        var wrong = gate.done && side !== gate.side;
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        fitFont(ctx, value, 104, 26, 12);
+        var w = Math.max(72, ctx.measureText(value).width + 26);
+
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        roundRect(ctx, cx - w / 2, ay - 18, w, 44, 7); ctx.fill();
+
+        roundRect(ctx, cx - w / 2, ay - 22, w, 44, 7);
+        ctx.fillStyle = right ? '#6fd08c' : (wrong ? '#7a7f8b' : '#f4f1e6');
+        ctx.fill();
+        ctx.strokeStyle = right ? '#4aa96a' : (wrong ? '#5d6270' : '#c9c4b4');
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#1a1d24';
+        ctx.fillText(value, cx, ay + 1);
+      });
+    }
+
+    // 갈림길 앞 표지판
+    if (!gate.done) {
+      var qy = sy(forkStart - QUESTION_BACK);
+      if (qy > -30 && qy < H + 30) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        var size = fitFont(ctx, gate.text, 262, 22, 10);
+        var tw = ctx.measureText(gate.text).width;
+        var bw = Math.min(tw + 26, ROAD_R - ROAD_L - 8), bh = size + 18;
+
+        ctx.fillStyle = '#3b3026';
+        ctx.fillRect(CENTER - 3, qy - 2, 6, bh / 2 + 12);
+
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        roundRect(ctx, CENTER - bw / 2 + 2, qy - bh / 2 + 3, bw, bh, 5); ctx.fill();
+
+        roundRect(ctx, CENTER - bw / 2, qy - bh / 2, bw, bh, 5);
+        ctx.fillStyle = '#1c2230';
+        ctx.fill();
+        ctx.strokeStyle = '#ffd48a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(gate.text, CENTER, qy + 1);
+      }
+    }
+
+    // 관문 선
+    var gy = sy(gate.y);
+    if (gy > -10 && gy < H + 10) {
+      ctx.strokeStyle = gate.done ? 'rgba(255,255,255,0.25)' : '#ffd48a';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([9, 7]);
+      ctx.beginPath();
+      ctx.moveTo(ROAD_L, gy);   ctx.lineTo(MEDIAN_L, gy);
+      ctx.moveTo(MEDIAN_R, gy); ctx.lineTo(ROAD_R, gy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // ── 아바타 ───────────────────────────────────
+  function drawAvatar(g, x, groundY, s, cloth, lift) {
+    var y = groundY - lift;
+
+    // 그림자는 땅에 남는다 — 뛴 높이만큼 작아진다
+    g.save();
+    g.fillStyle = 'rgba(0,0,0,' + (0.38 - lift * 0.006).toFixed(3) + ')';
+    g.beginPath();
+    g.ellipse(x, groundY + 2 * s, (9 - lift * 0.08) * s, (3.4 - lift * 0.03) * s, 0, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+
+    if (cloth.cape) {                    // 무지개 망토는 몸 뒤에 먼저 깔린다 — 어깨에서 아래로 벌어진다
+      for (var i = 0; i < RAINBOW.length; i++) {
+        var t0 = -7 + i * 2, t1 = -10.5 + i * 3;
+        g.fillStyle = RAINBOW[i];
+        g.beginPath();
+        g.moveTo(x + t0 * s, y - 21 * s);
+        g.lineTo(x + (t0 + 2) * s, y - 21 * s);
+        g.lineTo(x + (t1 + 3) * s, y - 4 * s);
+        g.lineTo(x + t1 * s, y - 4 * s);
+        g.closePath();
+        g.fill();
+      }
+    }
+
+    if (cloth.skirt) {
+      g.fillStyle = cloth.pants;
+      g.beginPath();
+      g.moveTo(x - 5 * s, y - 12 * s);
+      g.lineTo(x + 5 * s, y - 12 * s);
+      g.lineTo(x + 9 * s, y - 1 * s);
+      g.lineTo(x - 9 * s, y - 1 * s);
+      g.closePath();
+      g.fill();
+    } else {
+      g.fillStyle = cloth.pants;
+      g.fillRect(x - 5.5 * s, y - 9 * s, 4.5 * s, 8 * s);
+      g.fillRect(x + 1 * s, y - 9 * s, 4.5 * s, 8 * s);
+      g.fillStyle = '#22252d';
+      g.fillRect(x - 6 * s, y - 2 * s, 5 * s, 2 * s);
+      g.fillRect(x + 1 * s, y - 2 * s, 5 * s, 2 * s);
+    }
+
+    g.fillStyle = cloth.arm;             // 팔
+    g.fillRect(x - 10 * s, y - 20 * s, 3 * s, 10 * s);
+    g.fillRect(x + 7 * s, y - 20 * s, 3 * s, 10 * s);
+    g.fillStyle = SKIN;
+    g.fillRect(x - 10 * s, y - 11 * s, 3 * s, 2.6 * s);
+    g.fillRect(x + 7 * s, y - 11 * s, 3 * s, 2.6 * s);
+
+    g.fillStyle = cloth.shirt;           // 몸통
+    roundRect(g, x - 7.5 * s, y - 21 * s, 15 * s, 12.5 * s, 3 * s);
+    g.fill();
+    g.strokeStyle = OUTLINE;             // 색색의 바닥 위에서도 실루엣이 살도록 테두리를 두른다
+    g.lineWidth = 1.1 * s;
+    g.stroke();
+
+    var hx = x, hy = y - 27 * s, hr = 6.6 * s;
+
+    g.fillStyle = SKIN;                  // 머리
+    g.beginPath(); g.arc(hx, hy, hr, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = OUTLINE;
+    g.lineWidth = 1.1 * s;
+    g.stroke();
+    g.fillStyle = SKIN_DARK;
+    g.fillRect(x - 2.2 * s, y - 22.5 * s, 4.4 * s, 2 * s);
+
+    if (cloth.mask) {
+      g.fillStyle = cloth.shirt;
+      g.beginPath(); g.arc(hx, hy, hr + 0.4 * s, Math.PI, Math.PI * 2); g.fill();
+      g.fillRect(hx - hr, hy + 1.6 * s, hr * 2, hr - 1.6 * s);
+      g.fillStyle = SKIN;
+      g.fillRect(hx - hr, hy - 0.6 * s, hr * 2, 2.4 * s);
+    } else if (cloth.helmet) {
+      g.strokeStyle = '#dfe7f2';
+      g.lineWidth = 1.6 * s;
+      g.beginPath(); g.arc(hx, hy - 0.4 * s, hr + 1.8 * s, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = 'rgba(180, 220, 255, 0.25)';
+      g.beginPath(); g.arc(hx, hy - 0.4 * s, hr + 1.8 * s, 0, Math.PI * 2); g.fill();
+    } else if (cloth.hood) {
+      g.fillStyle = cloth.shirt;
+      g.beginPath(); g.arc(hx, hy - 0.6 * s, hr + 1.6 * s, Math.PI, Math.PI * 2); g.fill();
+      g.fillRect(hx - hr - 1.6 * s, hy - 0.6 * s, (hr + 1.6 * s) * 2, 2 * s);
+    } else if (cloth.hat) {
+      g.fillStyle = cloth.pants;
+      g.beginPath();
+      g.moveTo(hx, hy - 15 * s);
+      g.lineTo(hx + 8 * s, hy - 4 * s);
+      g.lineTo(hx - 8 * s, hy - 4 * s);
+      g.closePath(); g.fill();
+      g.fillStyle = '#f7cf3f';
+      g.fillRect(hx - 8 * s, hy - 5 * s, 16 * s, 2 * s);
+    } else {
+      g.fillStyle = HAIR;                // 기본 머리카락
+      g.beginPath(); g.arc(hx, hy - 1 * s, hr, Math.PI, Math.PI * 2); g.fill();
+      g.fillRect(hx - hr, hy - 1.6 * s, hr * 2, 1.8 * s);
+    }
+
+    if (cloth.crown) {
+      g.fillStyle = '#f7cf3f';
+      g.beginPath();
+      g.moveTo(hx - 5 * s, hy - 5.5 * s);
+      g.lineTo(hx - 5 * s, hy - 10 * s);
+      g.lineTo(hx - 2 * s, hy - 7.5 * s);
+      g.lineTo(hx, hy - 11 * s);
+      g.lineTo(hx + 2 * s, hy - 7.5 * s);
+      g.lineTo(hx + 5 * s, hy - 10 * s);
+      g.lineTo(hx + 5 * s, hy - 5.5 * s);
+      g.closePath(); g.fill();
+    }
+
+    if (!cloth.mask) {                   // 눈
+      g.fillStyle = '#2b2119';
+      g.beginPath(); g.arc(hx - 2.4 * s, hy + 0.4 * s, 0.95 * s, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.arc(hx + 2.4 * s, hy + 0.4 * s, 0.95 * s, 0, Math.PI * 2); g.fill();
+    }
+  }
+
+  function draw() {
+    drawFloor();
+    holes.forEach(function (h) { drawHole(h.y0, h.y1, true); });
+    drawCracks();
+    drawStairs();
+    gates.forEach(drawGate);
+
+    var lift = jump ? Math.sin(Math.PI * jump.t / JUMP_DUR) * JUMP_HIGH : 0;
+    drawAvatar(ctx, playerX, PLAYER_Y, 1, clothOf(wearing), lift);
+
+    if (flash) {
+      var a = Math.max(0, flash.t) * (flash.bad ? 0.5 : 0.3);
+      ctx.fillStyle = (flash.bad ? 'rgba(255, 106, 77,' : 'rgba(111, 208, 140,') + a + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function loop(now) {
     if (state !== 'playing') return;
-    if (entry === '0') entry = '';                     // 앞자리 0 은 자리만 차지한다
-    if (entry.length >= String(level.max).length) return;
-    entry += d;
-    if (noticeShown) {
-      verdictEl.textContent = '';
-      warmthEl.textContent = '';
-      noticeShown = false;
-    }
+
+    if (!lastTime) lastTime = now;
+    var dt = Math.min(0.05, (now - lastTime) / 1000);   // 탭을 다시 열었을 때 한 번에 튀지 않게 자른다
+    lastTime = now;
+
+    update(dt);
     draw();
+
+    if (state === 'playing') requestAnimationFrame(loop);
   }
 
-  function backspace() {
-    if (state !== 'playing' || entry === '') return;
-    entry = entry.slice(0, -1);
-    draw();
+  // ══ 입력 ══════════════════════════════════════
+  function steer(side) {
+    if (state !== 'playing' || locked) return;
+    lane = side;
   }
 
-  // ── 입력 ──────────────────────────────────────
+  function doJump() {
+    if (state !== 'playing' || jump) return;
+    jump = { t: 0 };
+  }
+
   document.addEventListener('keydown', function (e) {
-    if (e.key >= '0' && e.key <= '9') { typeDigit(e.key); e.preventDefault(); return; }
-
     switch (e.key) {
+      case 'ArrowLeft': case 'a': case 'A':
+        steer(-1); e.preventDefault(); break;
+      case 'ArrowRight': case 'd': case 'D':
+        steer(1); e.preventDefault(); break;
+      case 'ArrowUp': case 'w': case 'W':
+        doJump(); e.preventDefault(); break;
+      case ' ':
+        if (state === 'playing') doJump();
+        else if (state === 'ready') start();
+        else if (state === 'over') retryStage();
+        else if (state === 'paused') togglePause();
+        e.preventDefault();
+        break;
       case 'Enter':
-        if (state === 'playing') submit();
-        else start();
+        if (state === 'ready') start();
+        else if (state === 'over') retryStage();
+        else if (state === 'paused') togglePause();
         e.preventDefault();
         break;
-      case 'Backspace':
-        backspace();
-        e.preventDefault();
+      case 'p': case 'P':
+        if (state === 'playing' || state === 'paused') togglePause();
         break;
-      case 'Delete':
+      case 'r': case 'R':
+        if (sel && state !== 'menu' && state !== 'shop') readyScreen();
+        break;
       case 'Escape':
-        if (state === 'playing') { entry = ''; draw(); }
-        e.preventDefault();
-        break;
-      case 'r':
-      case 'R':
-        readyScreen();
+        if (state !== 'menu') openMenu();
         break;
     }
   });
 
-  keypad.addEventListener('click', function (e) {
+  pads.addEventListener('click', function (e) {
     var btn = e.target.closest('button');
     if (!btn) return;
-    if (btn.dataset.digit) { typeDigit(btn.dataset.digit); return; }
-    if (btn.dataset.act === 'submit') submit();
-    else if (btn.dataset.act === 'clear') backspace();
-    else if (btn.dataset.act === 'restart') readyScreen();
+    if (btn.dataset.act === 'jump') doJump();
+    else steer(Number(btn.dataset.side));
   });
 
-  levelsEl.addEventListener('click', function (e) {
-    var btn = e.target.closest('.level');
-    if (!btn) return;
-    setLevel(btn.dataset.level);
-    readyScreen();
+  // 화면을 눌러도 조작할 수 있다 — 좌우 절반은 길 고르기, 아바타 언저리는 점프
+  canvas.addEventListener('pointerdown', function (e) {
+    if (state !== 'playing') return;
+    var r = canvas.getBoundingClientRect();
+    var y = (e.clientY - r.top) / r.height * H;
+    if (y > PLAYER_Y - 40) doJump();
+    else steer((e.clientX - r.left) < r.width / 2 ? -1 : 1);
   });
 
-  startBtn.addEventListener('click', start);
+  shopBtn.addEventListener('click', function () {
+    if (state === 'playing') togglePause();
+    openShop();
+  });
 
-  setLevel(localStorage.getItem(LEVEL_KEY) || 'easy');
-  readyScreen();
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && state === 'playing') togglePause();
+  });
+
+  // ══ 시작 ══════════════════════════════════════
+  loadCloset();
+  stageNo = 1;
+  updateHud();
+
+  (function boot() {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(SEL_KEY) || 'null'); } catch (e) { /* 저장 불가 환경 무시 */ }
+
+    if (saved && saved.school && schoolOf(saved.school)) {
+      var list = null;
+      try { list = unitsOf(saved); } catch (e) { list = null; }
+      if (list && list[saved.unit]) { chooseUnit(saved); return; }
+    }
+    openMenu();
+  })();
 })();
 </script>
 </body>
